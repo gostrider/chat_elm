@@ -2,7 +2,7 @@ module Model exposing (..)
 
 import Html.App as App
 import Html exposing (..)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
 import Html.Attributes exposing (style)
 import Http exposing (Error, get)
 import Json.Decode exposing (Decoder, at, string, list, object3, object5)
@@ -36,13 +36,16 @@ type alias MsgListItem =
 
 type alias Model =
     { status : String
+    , currentMsg : String
     , chatList : List ChatListItem
     , currentHistory : List MsgListItem
     }
 
 
 type Msg
-    = GetUserChat String
+    = SendMsg
+    | GetUserChat String
+    | InputMsg String
     | ChatListSucceed (List ChatListItem)
     | MsgListSucceed (List MsgListItem)
     | Fail Error
@@ -90,17 +93,24 @@ getMessageList user_id =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model "init" [] [], getChatList )
+    ( Model "init" "" [] [], getChatList )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        SendMsg ->
+            (model, Cmd.none)
+
+        InputMsg newMsg ->
+            ({ model | currentMsg = newMsg }, Cmd.none )
+
         ChatListSucceed r_chatList ->
             ( { model | chatList = r_chatList }, Cmd.none )
 
         MsgListSucceed r_MsgList ->
-            ( { model | currentHistory = r_MsgList }, Cmd.none )
+            (Debug.log <| toString r_MsgList)
+                ( { model | currentHistory = r_MsgList }, Cmd.none )
 
         Fail err ->
             ( { model | status = toString err }, Cmd.none )
@@ -111,14 +121,11 @@ update msg model =
 
 chatItem : ChatListItem -> Html Msg
 chatItem { sender, avatar, body } =
-    div []
-        [ h3 [ onClick <| GetUserChat sender ] [ text sender ]
-        , p [] [ text avatar ]
-        ]
+    div [ onClick <| GetUserChat sender ] [ text sender ]
 
 
 msgItem : MsgListItem -> Html Msg
-msgItem { sender, recipient, body, send_direction, avatar } =
+msgItem { body, send_direction } =
     let
         placeLeft =
             [ ( "float", "left" ) ]
@@ -127,7 +134,10 @@ msgItem { sender, recipient, body, send_direction, avatar } =
             [ ( "float", "right" ) ]
 
         content config =
-            div [ style config ] [ text body ]
+            div []
+                [ div [ style config ] [ text body ]
+                , br [] []
+                ]
     in
         case send_direction of
             "client" ->
@@ -140,9 +150,17 @@ msgItem { sender, recipient, body, send_direction, avatar } =
                 content placeLeft
 
 
+config : String -> String -> List ( String, String )
+config align width =
+    [ ( "float", align ), ( "width", width ), ( "height", "500px" ), ( "overflow", "auto" ) ]
+
+
 view : Model -> Html Msg
 view model =
-    div [{- style [ ( "height", "500px" ), ( "overflow", "auto" ) ] -}]
-        [ div [ style [ ( "float", "left" ), ( "width", "20%" ) ] ] <| List.map chatItem model.chatList
-        , div [ style [ ( "float", "right" ), ( "width", "80%" ) ] ] <| List.map msgItem model.currentHistory
+    div []
+        [ div []
+            [ div [ style <| config "left" "30%" ] <| List.map chatItem model.chatList
+            , div [ style <| config "right" "70%" ] <| List.map msgItem model.currentHistory
+            , div [ style [ ( "float", "right" ) ] ] [ input [ onInput InputMsg ] [], button [ onClick SendMsg ] [ text "Send" ] ]
+            ]
         ]
