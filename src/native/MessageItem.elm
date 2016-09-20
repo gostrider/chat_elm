@@ -23,11 +23,6 @@ type Msg
     | Fail Error
 
 
-init : ( Model, Cmd Msg )
-init =
-    ()
-
-
 decodeMsgList : Decoder (List Model)
 decodeMsgList =
     list <|
@@ -54,7 +49,7 @@ msgItem { body, send_direction } =
     let
         content config =
             div []
-                [ div config [ text body ]
+                [ div [ config ] [ text body ]
                 , br [] []
                 ]
     in
