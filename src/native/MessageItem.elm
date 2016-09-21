@@ -1,6 +1,6 @@
 module MessageItem exposing (..)
 
-import CSS
+import CSS exposing (floatLeft, floatRight, messagePanel)
 import Html exposing (Html, br, div, text)
 import Html.Events exposing (onClick)
 import Html.Attributes exposing (style)
@@ -9,7 +9,7 @@ import Http exposing (Error, get)
 import Task exposing (Task, perform)
 
 
-type alias Model =
+type alias MessageItem =
     { sender : String
     , recipient : String
     , body : String
@@ -18,15 +18,24 @@ type alias Model =
     }
 
 
+type alias Model =
+    List MessageItem
+
+
 type Msg
-    = Succeed (List Model)
+    = Succeed Model
     | Fail Error
 
 
-decodeMsgList : Decoder (List Model)
+init : ( Model, Cmd Msg )
+init =
+    ( [], Cmd.none )
+
+
+decodeMsgList : Decoder Model
 decodeMsgList =
     list <|
-        object5 Model
+        object5 MessageItem
             (at [ "sender" ] string)
             (at [ "recipient" ] string)
             (at [ "body" ] string)
@@ -34,7 +43,7 @@ decodeMsgList =
             (at [ "avatar" ] string)
 
 
-messageList : String -> Task Error (List Model)
+messageList : String -> Task Error Model
 messageList user_id =
     get decodeMsgList <| "http://localhost:3000/get_userchat?user_id=" ++ user_id
 
@@ -44,7 +53,7 @@ getMessageList user_id =
     perform Fail Succeed <| messageList user_id
 
 
-msgItem : Model -> Html Msg
+msgItem : MessageItem -> Html Msg
 msgItem { body, send_direction } =
     let
         content config =
@@ -55,10 +64,25 @@ msgItem { body, send_direction } =
     in
         case send_direction of
             "client" ->
-                content CSS.floatLeft
+                content floatLeft
 
             "server" ->
-                content CSS.floatRight
+                content floatRight
 
             _ ->
-                content CSS.floatLeft
+                content floatLeft
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        Succeed messageList' ->
+            ( messageList', Cmd.none )
+
+        Fail _ ->
+            ( model, Cmd.none )
+
+
+view : Model -> Html Msg
+view model =
+    div [ messagePanel ] <| List.map msgItem model

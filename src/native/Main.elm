@@ -1,6 +1,6 @@
 module Model exposing (..)
 
-import CSS
+import CSS exposing (floatLeft, floatRight, actionPanel, rightPanel)
 import Html.App as App
 import Html exposing (..)
 import Html.Attributes exposing (style)
@@ -24,21 +24,31 @@ main =
 type alias Model =
     { status : String
     , currentMsg : String
-    , chatList : List ChatItem.Model
-    , currentHistory : List MessageItem.Model
+    , chatList : ChatItem.Model
+    , messageList : MessageItem.Model
     }
 
 
 type Msg
     = SendMsg
     | InputMsg String
-    | UpdateChatList (List ChatItem.Msg)
-    | UpdateMsgList (List MessageItem.Msg)
+    | UpdateChatList ChatItem.Msg
+    | UpdateMsgList MessageItem.Msg
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model "init" "" [] [], Cmd.map UpdateChatList (ChatItem.getChatList) )
+    let
+        ( chatList, chatListCmd ) =
+            ChatItem.init
+
+        ( messageList, messageListCmd ) =
+            MessageItem.init
+    in
+        Model "" "" chatList messageList
+            ! [ Cmd.map UpdateChatList chatListCmd
+              , Cmd.map UpdateMsgList messageListCmd
+              ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -50,25 +60,32 @@ update msg model =
         InputMsg newMsg ->
             ( { model | currentMsg = newMsg }, Cmd.none )
 
-        UpdateChatList r_chatList ->
-            ( { model | chatList = r_chatList }, Cmd.none )
+        UpdateChatList chatList' ->
+            let
+                ( newChatList, chatListEffect ) =
+                    ChatItem.update chatList' model.chatList
+            in
+                { model | chatList = newChatList }
+                    ! [ Cmd.map UpdateChatList chatListEffect ]
 
-        UpdateMsgList r_MsgList ->
-            ( { model | currentHistory = r_MsgList }, Cmd.none )
+        UpdateMsgList msgList' ->
+            let
+                ( newMsgList, msgListEffect ) =
+                    MessageItem.update msgList' model.messageList
+            in
+                { model | messageList = newMsgList }
+                    ! [ Cmd.map UpdateMsgList msgListEffect ]
 
 
 view : Model -> Html Msg
 view model =
     div []
-        [ div []
-            [ div [ CSS.leftPanel ] <| List.map ChatItem.chatItem model.chatList
-            , div [ CSS.rightPanel ]
-                [ div [ CSS.messagePanel ] <| List.map MessageItem.msgItem model.currentHistory
-                , div
-                    [ CSS.actionPanel ]
-                    [ button [ style [ ( "float", "right" ) ], onClick SendMsg ] [ text "send" ]
-                    , textarea [ style [ ( "float", "left" ), ( "width", "90%" ) ] ] []
-                    ]
+        [ App.map UpdateChatList <| ChatItem.view model.chatList
+        , div [ rightPanel ]
+            [ App.map UpdateMsgList <| MessageItem.view model.messageList
+            , div [ actionPanel ]
+                [ button [ floatRight, onClick SendMsg ] [ text "send" ]
+                , textarea [ floatLeft, style [ ( "width", "90%" ) ] ] []
                 ]
             ]
         ]
