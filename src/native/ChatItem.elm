@@ -34,12 +34,12 @@ type Msg
 init : ( Model, Cmd Msg )
 init =
     let
-        ( msgList, msgListCmd ) =
+        ( initMsgList, cmdMsgList ) =
             MessageItem.init
     in
-        Model [] msgList
+        Model [] initMsgList
             ! [ getChatList
-              , Cmd.map UpdateMsgList msgListCmd
+              , Cmd.map UpdateMsgList cmdMsgList
               ]
 
 
@@ -79,13 +79,13 @@ update msg model =
         Fail _ ->
             ( model, Cmd.none )
 
-        UpdateMsgList msgList' ->
+        UpdateMsgList msgMsgList ->
             let
-                ( newMsgList, msgListEffect ) =
-                    MessageItem.update msgList' model.messageList
+                ( newMsgList, effectMsgList ) =
+                    MessageItem.update msgMsgList model.messageList
             in
                 { model | messageList = newMsgList }
-                    ! [ Cmd.map UpdateMsgList msgListEffect ]
+                    ! [ Cmd.map UpdateMsgList effectMsgList ]
 
 
 view : Model -> Html Msg

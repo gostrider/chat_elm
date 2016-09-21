@@ -35,10 +35,10 @@ type Msg
 init : ( Model, Cmd Msg )
 init =
     let
-        ( action, actionCmd ) =
+        ( initAction, cmdAction ) =
             ActionBar.init
     in
-        ( Model [] action, Cmd.map UpdateAction actionCmd )
+        ( Model [] initAction, Cmd.map UpdateAction cmdAction )
 
 
 decodeMsgList : Decoder (List MessageItem)
@@ -85,23 +85,23 @@ msgItem { body, send_direction } =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Succeed messageList' ->
+        Succeed message' ->
             let
-                ( newSucceed, succeedCmd ) =
+                ( newSucceed, effectSucceed ) =
                     ActionBar.update (ActionBar.Visible "visible") model.action
             in
-                ( { model | messages = messageList', action = newSucceed }, Cmd.map UpdateAction succeedCmd )
+                ( { model | messages = message', action = newSucceed }, Cmd.map UpdateAction effectSucceed )
 
         Fail _ ->
             ( model, Cmd.none )
 
-        UpdateAction action' ->
+        UpdateAction msgAction ->
             let
-                ( newAction, actionEffect ) =
-                    ActionBar.update action' model.action
+                ( newAction, effectAction ) =
+                    ActionBar.update msgAction model.action
             in
                 { model | action = newAction }
-                    ! [ Cmd.map UpdateAction actionEffect ]
+                    ! [ Cmd.map UpdateAction effectAction ]
 
 
 view : Model -> Html Msg
