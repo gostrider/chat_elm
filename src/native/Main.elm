@@ -1,13 +1,7 @@
 module Model exposing (..)
 
-import CSS exposing (floatLeft, floatRight, actionPanel, rightPanel)
 import Html.App as App
-import Html exposing (..)
-import Html.Attributes exposing (style)
-import Html.Events exposing (onClick, onInput)
-import Http exposing (Error, get)
-import Json.Decode exposing (Decoder, at, string, list, object3, object5)
-import Task exposing (Task, perform)
+import Html exposing (Html)
 import ChatItem
 import MessageItem
 
@@ -25,7 +19,6 @@ type alias Model =
     { status : String
     , currentMsg : String
     , chatList : ChatItem.Model
-    , messageList : MessageItem.Model
     }
 
 
@@ -33,7 +26,6 @@ type Msg
     = SendMsg
     | InputMsg String
     | UpdateChatList ChatItem.Msg
-    | UpdateMsgList MessageItem.Msg
 
 
 init : ( Model, Cmd Msg )
@@ -41,14 +33,8 @@ init =
     let
         ( chatList, chatListCmd ) =
             ChatItem.init
-
-        ( messageList, messageListCmd ) =
-            MessageItem.init
     in
-        Model "" "" chatList messageList
-            ! [ Cmd.map UpdateChatList chatListCmd
-              , Cmd.map UpdateMsgList messageListCmd
-              ]
+        ( Model "" "" chatList, Cmd.map UpdateChatList chatListCmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -68,24 +54,7 @@ update msg model =
                 { model | chatList = newChatList }
                     ! [ Cmd.map UpdateChatList chatListEffect ]
 
-        UpdateMsgList msgList' ->
-            let
-                ( newMsgList, msgListEffect ) =
-                    MessageItem.update msgList' model.messageList
-            in
-                { model | messageList = newMsgList }
-                    ! [ Cmd.map UpdateMsgList msgListEffect ]
-
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ App.map UpdateChatList <| ChatItem.view model.chatList
-        , div [ rightPanel ]
-            [ App.map UpdateMsgList <| MessageItem.view model.messageList
-            , div [ actionPanel ]
-                [ button [ floatRight, onClick SendMsg ] [ text "send" ]
-                , textarea [ floatLeft, style [ ( "width", "90%" ) ] ] []
-                ]
-            ]
-        ]
+    App.map UpdateChatList <| ChatItem.view model.chatList

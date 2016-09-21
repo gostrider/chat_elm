@@ -1,11 +1,13 @@
 module MessageItem exposing (..)
 
+import ActionBar
 import CSS exposing (floatLeft, floatRight, messagePanel)
 import Html exposing (Html, br, div, text)
+import Html.App as App
 import Html.Events exposing (onClick)
 import Html.Attributes exposing (style)
-import Json.Decode exposing (Decoder, at, string, list, object5)
 import Http exposing (Error, get)
+import Json.Decode exposing (Decoder, at, string, list, object5)
 import Task exposing (Task, perform)
 
 
@@ -19,20 +21,27 @@ type alias MessageItem =
 
 
 type alias Model =
-    List MessageItem
+    { messages : List MessageItem
+    , action : ActionBar.Model
+    }
 
 
 type Msg
-    = Succeed Model
+    = Succeed (List MessageItem)
     | Fail Error
+    | UpdateAction ActionBar.Msg
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( [], Cmd.none )
+    let
+        ( action, actionCmd ) =
+            ActionBar.init
+    in
+        ( Model [] action, Cmd.map UpdateAction actionCmd )
 
 
-decodeMsgList : Decoder Model
+decodeMsgList : Decoder (List MessageItem)
 decodeMsgList =
     list <|
         object5 MessageItem
@@ -43,7 +52,7 @@ decodeMsgList =
             (at [ "avatar" ] string)
 
 
-messageList : String -> Task Error Model
+messageList : String -> Task Error (List MessageItem)
 messageList user_id =
     get decodeMsgList <| "http://localhost:3000/get_userchat?user_id=" ++ user_id
 
@@ -77,12 +86,27 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Succeed messageList' ->
-            ( messageList', Cmd.none )
+            let
+                ( newSucceed, succeedCmd ) =
+                    ActionBar.update (ActionBar.Visible "visible") model.action
+            in
+                ( { model | messages = messageList', action = newSucceed }, Cmd.map UpdateAction succeedCmd )
 
         Fail _ ->
             ( model, Cmd.none )
 
+        UpdateAction action' ->
+            let
+                ( newAction, actionEffect ) =
+                    ActionBar.update action' model.action
+            in
+                { model | action = newAction }
+                    ! [ Cmd.map UpdateAction actionEffect ]
+
 
 view : Model -> Html Msg
 view model =
-    div [ messagePanel ] <| List.map msgItem model
+    div []
+        [ div [ messagePanel ] <| List.map msgItem model.messages
+        , App.map UpdateAction <| ActionBar.view model.action
+        ]
