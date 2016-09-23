@@ -4,6 +4,7 @@ import Html.App as App
 import Html exposing (Html)
 import ChatItem
 import MessageItem
+import Login
 
 
 main =
@@ -16,7 +17,7 @@ main =
 
 
 type alias Model =
-    { status : String
+    { userStatus : Login.Model
     , currentMsg : String
     , chatList : ChatItem.Model
     }
@@ -26,15 +27,22 @@ type Msg
     = SendMsg
     | InputMsg String
     | UpdateChatList ChatItem.Msg
+    | UpdateLogin Login.Msg
 
 
 init : ( Model, Cmd Msg )
 init =
     let
+        ( initLogin, cmdLogin ) =
+            Login.init
+
         ( initChatList, cmdChatList ) =
             ChatItem.init
     in
-        ( Model "" "" initChatList, Cmd.map UpdateChatList cmdChatList )
+        Model initLogin "" initChatList
+            ! [ Cmd.map UpdateChatList cmdLogin
+              , Cmd.map UpdateLogin cmdLogin
+              ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -53,6 +61,14 @@ update msg model =
             in
                 { model | chatList = newChatList }
                     ! [ Cmd.map UpdateChatList effectChatList ]
+
+        UpdateLogin msgLogin ->
+            let
+                ( newLogin, effectLogin ) =
+                    Login.update msgLogin model.userStatus
+            in
+                { model | userStatus = newLogin }
+                    ! [ Cmd.map UpdateLogin effectLogin ]
 
 
 view : Model -> Html Msg
