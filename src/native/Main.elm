@@ -73,4 +73,12 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    App.map UpdateChatList <| ChatItem.view model.chatList
+    case model.userStatus.status of
+        "succeed" ->
+            App.map UpdateChatList <| ChatItem.view model.chatList
+
+        "failed" ->
+            App.map UpdateLogin <| Login.view model.userStatus
+
+        _ ->
+            ()

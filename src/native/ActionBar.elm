@@ -19,6 +19,27 @@ type Msg
     | Visible String
 
 
+
+--send : String -> Task Error Int
+--send c =
+--    let
+--        payload =
+--            En.object
+--                [ ( "cookie", En.string c )
+--                ]
+--    in
+--        Http.fromJson (at [ "status" ] int) <|
+--            Http.send Http.defaultSettings
+--                { verb = "POST"
+--                , headers = [ ( "Content-Type", "application/json" ) ]
+--                , url = "http://localhost:3000/test_reply"
+--                , body = Http.string <| En.encode 0 payload
+--                }
+--send_message : String -> Cmd Msg
+--send_message cookie =
+--    perform Fail SendSucceed <| send cookie
+
+
 init : ( Model, Cmd Msg )
 init =
     ( Model "" "" "hidden", Cmd.none )
