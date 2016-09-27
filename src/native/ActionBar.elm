@@ -10,6 +10,7 @@ type alias Model =
     { message : String
     , action : String
     , visible : String
+    , user_session : String
     }
 
 

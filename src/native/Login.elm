@@ -8,6 +8,7 @@ import Http as Http exposing (Error)
 import Json.Decode as De exposing (Decoder, at, int, string)
 import Json.Encode as En
 import Task exposing (Task, perform)
+import User
 
 
 main =
@@ -84,7 +85,11 @@ update msg model =
             let
                 maybeSession =
                     Maybe.withDefault "unknown" resp
+
+                newUser =
+                    User.Context model.username model.password maybeSession
             in
+                (Debug.log maybeSession)
                 ( { model | status = "succeed", cookie = maybeSession }, Cmd.none )
 
         Fail err ->
