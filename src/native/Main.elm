@@ -1,4 +1,4 @@
-module Model exposing (..)
+module Main exposing (..)
 
 import Html.App as App
 import Html exposing (Html)
@@ -30,15 +30,11 @@ type Msg
 init : ( Model, Cmd Msg )
 init =
     let
-        ( initLogin, cmdLogin ) =
-            Login.init
-
         ( initChatList, cmdChatList ) =
             ChatItem.init
     in
-        Model initLogin initChatList
-            ! [ Cmd.map UpdateLogin cmdLogin
-              , Cmd.map UpdateChatList cmdChatList
+        Model Login.init initChatList
+            ! [ Cmd.map UpdateChatList cmdChatList
               ]
 
 
@@ -50,16 +46,14 @@ update msg model =
                 ( newChatList, effectChatList ) =
                     ChatItem.update msgChatList model.chatList
             in
-                { model | chatList = newChatList }
-                    ! [ Cmd.map UpdateChatList effectChatList ]
+                ( { model | chatList = newChatList }, Cmd.map UpdateChatList effectChatList )
 
         UpdateLogin msgLogin ->
             let
                 ( newLogin, effectLogin ) =
                     Login.update msgLogin model.userStatus
             in
-                { model | userStatus = newLogin }
-                    ! [ Cmd.map UpdateLogin effectLogin ]
+                ( { model | userStatus = newLogin }, Cmd.map UpdateLogin effectLogin )
 
 
 view : Model -> Html Msg

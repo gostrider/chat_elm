@@ -1,8 +1,12 @@
 module ChatItem exposing (..)
 
-import ActionBar
+--import ActionBar
+
 import CSS exposing (leftPanel, rightPanel)
-import MessageItem
+
+
+--import MessageItem
+
 import Html.App as App
 import Html exposing (Html, div, text)
 import Html.Events exposing (onClick)
@@ -19,8 +23,10 @@ type alias ChatItem =
 
 
 type alias Model =
-    { chatList : List ChatItem
-    , messageList : MessageItem.Model
+    { chatList : List
+    , current :
+        String
+        --    , messageList : MessageItem.Model
     }
 
 
@@ -28,19 +34,26 @@ type Msg
     = GetUserChat String
     | Succeed (List ChatItem)
     | Fail Error
-    | UpdateMsgList MessageItem.Msg
+
+
+
+--    | UpdateMsgList MessageItem.Msg
 
 
 init : ( Model, Cmd Msg )
 init =
-    let
-        ( initMsgList, cmdMsgList ) =
-            MessageItem.init
-    in
-        Model [] initMsgList
-            ! [ getChatList
-              , Cmd.map UpdateMsgList cmdMsgList
-              ]
+    Model [] ! [ getChatList ]
+
+
+
+--    let
+--        ( initMsgList, cmdMsgList ) =
+--            MessageItem.init
+--    in
+--        Model [] initMsgList
+--            ! [ getChatList
+--              , Cmd.map UpdateMsgList cmdMsgList
+--              ]
 
 
 decodeChatList : Decoder (List ChatItem)
@@ -71,7 +84,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GetUserChat user_id ->
-            ( model, Cmd.map UpdateMsgList <| MessageItem.getMessageList user_id )
+            ( { model | current = user_id }, Cmd.none )
 
         Succeed chatList' ->
             ( { model | chatList = chatList' }, Cmd.none )
@@ -79,20 +92,22 @@ update msg model =
         Fail _ ->
             ( model, Cmd.none )
 
-        UpdateMsgList msgMsgList ->
-            let
-                ( newMsgList, effectMsgList ) =
-                    MessageItem.update msgMsgList model.messageList
-            in
-                { model | messageList = newMsgList }
-                    ! [ Cmd.map UpdateMsgList effectMsgList ]
+
+
+--        UpdateMsgList msgMsgList ->
+--            let
+--                ( newMsgList, effectMsgList ) =
+--                    MessageItem.update msgMsgList model.messageList
+--            in
+--                { model | messageList = newMsgList }
+--                    ! [ Cmd.map UpdateMsgList effectMsgList ]
 
 
 view : Model -> Html Msg
 view model =
     div []
         [ div [ leftPanel ] <| List.map chatItem model.chatList
-        , div [ rightPanel ]
-            [ App.map UpdateMsgList <| MessageItem.view model.messageList
-            ]
+          --        , div [ rightPanel ]
+          --            [ App.map UpdateMsgList <| MessageItem.view model.messageList
+          --            ]
         ]

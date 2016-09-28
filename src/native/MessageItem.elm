@@ -88,7 +88,7 @@ update msg model =
         Succeed message' ->
             let
                 ( newSucceed, effectSucceed ) =
-                    ActionBar.update (ActionBar.Visible "visible") model.action
+                    ActionBar.update model.user (ActionBar.Visible "visible") model.action
             in
                 ( { model | messages = message', action = newSucceed }, Cmd.map UpdateAction effectSucceed )
 
@@ -98,10 +98,9 @@ update msg model =
         UpdateAction msgAction ->
             let
                 ( newAction, effectAction ) =
-                    ActionBar.update msgAction model.action
+                    ActionBar.update model.user msgAction model.action
             in
-                { model | action = newAction }
-                    ! [ Cmd.map UpdateAction effectAction ]
+                ( { model | action = newAction }, Cmd.map UpdateAction effectAction)
 
 
 view : Model -> Html Msg

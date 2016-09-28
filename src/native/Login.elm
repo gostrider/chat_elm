@@ -8,30 +8,20 @@ import Http as Http exposing (Error)
 import Json.Decode as De exposing (Decoder, at, int, string)
 import Json.Encode as En
 import Task exposing (Task, perform)
-import User
-
-
-main =
-    App.program
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions = \_ -> Sub.none
-        }
 
 
 type alias Model =
-    { account : String
+    { username : String
     , password : String
+    , session : String
     , status : String
-    , cookie : String
     }
 
 
 type Msg
-    = Auth
-    | Username String
+    = Username String
     | Password String
+    | Auth
     | Succeed (Maybe String)
     | Fail Error
 
@@ -64,33 +54,30 @@ auth username password =
     perform Fail Succeed <| verify username password
 
 
-init : ( Model, Cmd Msg )
+init : Model
 init =
-    ( Model "" "" "" "", Cmd.none )
+    Model "" "" "" ""
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Auth ->
-            ( model, auth model.account model.password )
-
-        Username username ->
-            ( { model | account = username }, Cmd.none )
+        Username username' ->
+            ( { model | username = username' }, Cmd.none )
 
         Password password' ->
             ( { model | password = password' }, Cmd.none )
 
-        Succeed resp ->
-            let
-                maybeSession =
-                    Maybe.withDefault "unknown" resp
+        Auth ->
+            ( model, auth model.username model.password )
 
-                newUser =
-                    User.Context model.username model.password maybeSession
-            in
-                (Debug.log maybeSession)
-                ( { model | status = "succeed", cookie = maybeSession }, Cmd.none )
+        Succeed resp ->
+            ( { model
+                | status = "success"
+                , session = Maybe.withDefault "unknown" resp
+              }
+            , Cmd.none
+            )
 
         Fail err ->
             ( { model | status = "failed" }, Cmd.none )
