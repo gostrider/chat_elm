@@ -5,7 +5,7 @@ import Html.App as App
 import Html.Attributes exposing (align, type', style)
 import Html.Events exposing (onClick, onInput)
 import Http as Http exposing (Error)
-import Json.Decode as De exposing (Decoder, at, int, string)
+import Json.Decode as De exposing (Decoder, at, int, string, object3)
 import Json.Encode as En
 import Task exposing (Task, perform)
 
@@ -13,25 +13,33 @@ import Task exposing (Task, perform)
 type alias Model =
     { username : String
     , password : String
-    , session : String
     , status : String
+    , user : AuthResp
     }
 
+type alias AuthResp =
+    { id : String
+    , uuid : String
+    , session : String
+    }
 
 type Msg
     = Username String
     | Password String
     | Auth
-    | Succeed (Maybe String)
+    | Succeed AuthResp
     | Fail Error
 
 
-decoder : Decoder (Maybe String)
+decoder : Decoder AuthResp
 decoder =
-    De.maybe <| at [ "user_session" ] string
+    object3 AuthResp
+        (at [ "chat_id" ] string)
+        (at [ "uuid" ] string)
+        (at [ "user_session" ] string)
 
 
-verify : String -> String -> Task Error (Maybe String)
+verify : String -> String -> Task Error AuthResp
 verify username password =
     let
         payload =
@@ -56,7 +64,7 @@ auth username password =
 
 init : Model
 init =
-    Model "" "" "" ""
+    Model "" "" "" <| AuthResp "" "" ""
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -74,7 +82,7 @@ update msg model =
         Succeed resp ->
             ( { model
                 | status = "success"
-                , session = Maybe.withDefault "unknown" resp
+                , user = resp
               }
             , Cmd.none
             )

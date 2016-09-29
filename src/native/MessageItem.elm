@@ -1,6 +1,5 @@
 module MessageItem exposing (..)
 
-import ActionBar
 import CSS exposing (floatLeft, floatRight, messagePanel)
 import Html exposing (Html, br, div, text)
 import Html.App as App
@@ -22,23 +21,17 @@ type alias MessageItem =
 
 type alias Model =
     { messages : List MessageItem
-    , action : ActionBar.Model
     }
 
 
 type Msg
     = Succeed (List MessageItem)
     | Fail Error
-    | UpdateAction ActionBar.Msg
 
 
-init : ( Model, Cmd Msg )
+init : Model
 init =
-    let
-        ( initAction, cmdAction ) =
-            ActionBar.init
-    in
-        ( Model [] initAction, Cmd.map UpdateAction cmdAction )
+    Model []
 
 
 decodeMsgList : Decoder (List MessageItem)
@@ -86,26 +79,16 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Succeed message' ->
-            let
-                ( newSucceed, effectSucceed ) =
-                    ActionBar.update model.user (ActionBar.Visible "visible") model.action
-            in
-                ( { model | messages = message', action = newSucceed }, Cmd.map UpdateAction effectSucceed )
+            ( { model | messages = message'}, Cmd.none )
 
         Fail _ ->
             ( model, Cmd.none )
 
-        UpdateAction msgAction ->
-            let
-                ( newAction, effectAction ) =
-                    ActionBar.update model.user msgAction model.action
-            in
-                ( { model | action = newAction }, Cmd.map UpdateAction effectAction)
-
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ div [ messagePanel ] <| List.map msgItem model.messages
-        , App.map UpdateAction <| ActionBar.view model.action
-        ]
+    div [ messagePanel ] <| List.map msgItem model.messages
+--    div []
+--        [ div [ messagePanel ] <| List.map msgItem model.messages
+--        , App.map UpdateAction <| ActionBar.view model.action
+--        ]

@@ -1,10 +1,12 @@
-module Main exposing (..)
+module RMain exposing (..)
 
-import Html.App as App
-import Html exposing (Html)
+import Login
 import ChatItem
 import MessageItem
-import Login
+import ActionBar
+import CSS
+import Html.App as App
+import Html exposing (Html, div)
 
 
 main =
@@ -17,14 +19,18 @@ main =
 
 
 type alias Model =
-    { userStatus : Login.Model
+    { login : Login.Model
     , chatList : ChatItem.Model
+    , messageList : MessageItem.Model
+    , action : ActionBar.Model
     }
 
 
 type Msg
-    = UpdateChatList ChatItem.Msg
-    | UpdateLogin Login.Msg
+    = UpdateLogin Login.Msg
+    | UpdateChatList ChatItem.Msg
+    | UpdateMsgList MessageItem.Msg
+    | UpdateAction ActionBar.Msg
 
 
 init : ( Model, Cmd Msg )
@@ -33,7 +39,7 @@ init =
         ( initChatList, cmdChatList ) =
             ChatItem.init
     in
-        Model Login.init initChatList
+        Model Login.init initChatList MessageItem.init ActionBar.init
             ! [ Cmd.map UpdateChatList cmdChatList
               ]
 
@@ -41,26 +47,82 @@ init =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        UpdateChatList msgChatList ->
-            let
-                ( newChatList, effectChatList ) =
-                    ChatItem.update msgChatList model.chatList
-            in
-                ( { model | chatList = newChatList }, Cmd.map UpdateChatList effectChatList )
-
         UpdateLogin msgLogin ->
             let
-                ( newLogin, effectLogin ) =
-                    Login.update msgLogin model.userStatus
+                ( login', effectLogin ) =
+                    Login.update msgLogin model.login
             in
-                ( { model | userStatus = newLogin }, Cmd.map UpdateLogin effectLogin )
+                ( { model | login = login' }, Cmd.map UpdateLogin effectLogin )
+
+        UpdateChatList (ChatItem.GetUserChat user_id) ->
+            let
+                ( chatList', effectChatList ) =
+                    ChatItem.update (ChatItem.GetUserChat user_id) model.chatList
+            in
+                { model | chatList = chatList' }
+                    ! [ Cmd.map UpdateChatList effectChatList
+                      , Cmd.map UpdateMsgList <| MessageItem.getMessageList user_id
+                      ]
+
+        UpdateChatList msgChatList ->
+            let
+                ( chatList', effectChatList ) =
+                    ChatItem.update msgChatList model.chatList
+            in
+                ( { model | chatList = chatList' }, Cmd.map UpdateChatList effectChatList )
+
+        UpdateMsgList (MessageItem.Succeed messages') ->
+            let
+                context =
+                    { send_from = model.login.user.id
+                    , send_to = model.chatList.current
+                    , session = model.login.user.session
+                    }
+
+                ( messageList', effectMsgList ) =
+                    MessageItem.update (MessageItem.Succeed messages') model.messageList
+
+                ( newAction, effectAction ) =
+                    ActionBar.update context (ActionBar.Visible "visible") model.action
+            in
+                { model | messageList = messageList', action = newAction }
+                    ! [ Cmd.map UpdateMsgList effectMsgList
+                      , Cmd.map UpdateAction effectAction
+                      ]
+
+        UpdateMsgList msgMsgList ->
+            let
+                ( newMsgList, effectMsgList ) =
+                    MessageItem.update msgMsgList model.messageList
+            in
+                ( { model | messageList = newMsgList }, Cmd.map UpdateMsgList effectMsgList )
+
+        UpdateAction msgAction ->
+            let
+                context =
+                    { send_from = model.login.user.id
+                    , send_to = model.chatList.current
+                    , session = model.login.user.session
+                    }
+
+                ( newAction, effectAction ) =
+                    ActionBar.update context msgAction model.action
+            in
+                ( { model | action = newAction }, Cmd.map UpdateAction effectAction )
 
 
 view : Model -> Html Msg
 view model =
-    case model.userStatus.status of
-        "succeed" ->
-            App.map UpdateChatList <| ChatItem.view model.chatList
+    case model.login.status of
+        "success" ->
+            -- TODO Refine CSS ordering
+            div []
+                [ App.map UpdateChatList <| ChatItem.view model.chatList
+                , div [ CSS.rightPanel ]
+                    [ App.map UpdateMsgList <| MessageItem.view model.messageList
+                    , App.map UpdateAction <| ActionBar.view model.action
+                    ]
+                ]
 
         _ ->
-            App.map UpdateLogin <| Login.view model.userStatus
+            App.map UpdateLogin <| Login.view model.login
