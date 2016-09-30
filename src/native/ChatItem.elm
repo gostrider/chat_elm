@@ -28,34 +28,9 @@ type Msg
     | Fail Error
 
 
-init : ( Model, Cmd Msg )
+init : Model
 init =
-    ( Model [] "", getChatList )
-
-
-decodeChatList : Decoder (List ChatItem)
-decodeChatList =
-    list <|
-        object3 ChatItem
-            (at [ "reduction", "sender" ] string)
-            (at [ "reduction", "body" ] string)
-            (at [ "reduction", "avatar" ] string)
-
-
-chatList : Task Error (List ChatItem)
-chatList =
-    -- TODO filter message sends to account
-    get decodeChatList "http://localhost:3000/get_userlist"
-
-
-getChatList : Cmd Msg
-getChatList =
-    perform Fail Succeed chatList
-
-
-chatItem : ChatItem -> Html Msg
-chatItem { sender, avatar, body } =
-    div [ onClick <| GetUserChat sender ] [ text sender ]
+    Model [] ""
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -76,10 +51,25 @@ view model =
     div [ leftPanel ] <| List.map chatItem model.chatList
 
 
+decodeChatList : Decoder (List ChatItem)
+decodeChatList =
+    list <|
+        object3 ChatItem
+            (at [ "reduction", "sender" ] string)
+            (at [ "reduction", "body" ] string)
+            (at [ "reduction", "avatar" ] string)
 
---    div []
---        [ div [ leftPanel ] <| List.map chatItem model.chatList
---        , div [ rightPanel ]
---            [ App.map UpdateMsgList <| MessageItem.view model.messageList
---            ]
---        ]
+
+chatList : String -> Task Error (List ChatItem)
+chatList id =
+    get decodeChatList <| "http://localhost:3000/get_userlist?account=" ++ id
+
+
+getChatList : String -> Cmd Msg
+getChatList id =
+    perform Fail Succeed <| chatList id
+
+
+chatItem : ChatItem -> Html Msg
+chatItem { sender, avatar, body } =
+    div [ onClick <| GetUserChat sender ] [ text sender ]

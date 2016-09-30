@@ -34,6 +34,21 @@ init =
     Model []
 
 
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        Succeed message' ->
+            ( { model | messages = message' }, Cmd.none )
+
+        Fail _ ->
+            ( model, Cmd.none )
+
+
+view : Model -> Html Msg
+view model =
+    div [ messagePanel ] <| List.map msgItem model.messages
+
+
 decodeMsgList : Decoder (List MessageItem)
 decodeMsgList =
     list <|
@@ -45,14 +60,19 @@ decodeMsgList =
             (at [ "avatar" ] string)
 
 
-messageList : String -> Task Error (List MessageItem)
-messageList user_id =
-    get decodeMsgList <| "http://localhost:3000/get_userchat?user_id=" ++ user_id
+messageList : String -> String -> Task Error (List MessageItem)
+messageList send_from send_to =
+    -- TODO Failed to retrieve user messages
+    get decodeMsgList <|
+        "http://localhost:3000/get_userchat?from="
+            ++ send_from
+            ++ "&to="
+            ++ send_to
 
 
-getMessageList : String -> Cmd Msg
-getMessageList user_id =
-    perform Fail Succeed <| messageList user_id
+getMessageList : String -> String -> Cmd Msg
+getMessageList send_from send_to =
+    perform Fail Succeed <| messageList send_from send_to
 
 
 msgItem : MessageItem -> Html Msg
@@ -73,22 +93,3 @@ msgItem { body, send_direction } =
 
             _ ->
                 content floatLeft
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        Succeed message' ->
-            ( { model | messages = message'}, Cmd.none )
-
-        Fail _ ->
-            ( model, Cmd.none )
-
-
-view : Model -> Html Msg
-view model =
-    div [ messagePanel ] <| List.map msgItem model.messages
---    div []
---        [ div [ messagePanel ] <| List.map msgItem model.messages
---        , App.map UpdateAction <| ActionBar.view model.action
---        ]

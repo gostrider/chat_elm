@@ -35,18 +35,22 @@ type Msg
 
 init : ( Model, Cmd Msg )
 init =
-    let
-        ( initChatList, cmdChatList ) =
-            ChatItem.init
-    in
-        Model Login.init initChatList MessageItem.init ActionBar.init
-            ! [ Cmd.map UpdateChatList cmdChatList
-              ]
+    ( Model Login.init ChatItem.init MessageItem.init ActionBar.init, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        UpdateLogin (Login.Succeed resp) ->
+            let
+                ( login', effectLogin ) =
+                    Login.update (Login.Succeed resp) model.login
+            in
+                { model | login = login' }
+                    ! [ Cmd.map UpdateLogin effectLogin
+                      , Cmd.map UpdateChatList <| ChatItem.getChatList login'.user.id
+                      ]
+
         UpdateLogin msgLogin ->
             let
                 ( login', effectLogin ) =
@@ -61,7 +65,7 @@ update msg model =
             in
                 { model | chatList = chatList' }
                     ! [ Cmd.map UpdateChatList effectChatList
-                      , Cmd.map UpdateMsgList <| MessageItem.getMessageList user_id
+                      , Cmd.map UpdateMsgList <| MessageItem.getMessageList user_id model.login.user.id
                       ]
 
         UpdateChatList msgChatList ->

@@ -17,11 +17,13 @@ type alias Model =
     , user : AuthResp
     }
 
+
 type alias AuthResp =
     { id : String
     , uuid : String
     , session : String
     }
+
 
 type Msg
     = Username String
@@ -29,37 +31,6 @@ type Msg
     | Auth
     | Succeed AuthResp
     | Fail Error
-
-
-decoder : Decoder AuthResp
-decoder =
-    object3 AuthResp
-        (at [ "chat_id" ] string)
-        (at [ "uuid" ] string)
-        (at [ "user_session" ] string)
-
-
-verify : String -> String -> Task Error AuthResp
-verify username password =
-    let
-        payload =
-            En.object
-                [ ( "username", En.string username )
-                , ( "password", En.string password )
-                ]
-    in
-        Http.fromJson decoder <|
-            Http.send Http.defaultSettings
-                { verb = "POST"
-                , headers = [ ( "Content-Type", "application/json" ) ]
-                , url = "http://localhost:3000/login"
-                , body = Http.string <| En.encode 0 payload
-                }
-
-
-auth : String -> String -> Cmd Msg
-auth username password =
-    perform Fail Succeed <| verify username password
 
 
 init : Model
@@ -107,3 +78,34 @@ view model =
             , button [ onClick Auth ] [ text "Login" ]
             ]
         ]
+
+
+decoder : Decoder AuthResp
+decoder =
+    object3 AuthResp
+        (at [ "chat_id" ] string)
+        (at [ "uuid" ] string)
+        (at [ "user_session" ] string)
+
+
+verify : String -> String -> Task Error AuthResp
+verify username password =
+    let
+        payload =
+            En.object
+                [ ( "username", En.string username )
+                , ( "password", En.string password )
+                ]
+    in
+        Http.fromJson decoder <|
+            Http.send Http.defaultSettings
+                { verb = "POST"
+                , headers = [ ( "Content-Type", "application/json" ) ]
+                , url = "http://localhost:3000/login"
+                , body = Http.string <| En.encode 0 payload
+                }
+
+
+auth : String -> String -> Cmd Msg
+auth username password =
+    perform Fail Succeed <| verify username password

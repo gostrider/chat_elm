@@ -32,31 +32,6 @@ type Msg
     | Fail Error
 
 
-send : String -> String -> String -> String -> Task Error Int
-send s f t m =
-    let
-        payload =
-            En.object
-                [ ( "from", En.string f )
-                , ( "to", En.string t )
-                , ( "content", En.string m )
-                , ( "cookie", En.string s )
-                ]
-    in
-        Http.fromJson (at [ "status" ] int) <|
-            Http.send Http.defaultSettings
-                { verb = "POST"
-                , headers = [ ( "Content-Type", "application/json" ) ]
-                , url = "http://localhost:3000/reply"
-                , body = Http.string <| En.encode 0 payload
-                }
-
-
-send_message : Context -> String -> Cmd Msg
-send_message ctx message =
-    perform Fail SendSucceed <| send ctx.session ctx.send_from ctx.send_to message
-
-
 init : Model
 init =
     Model "" "" "hidden"
@@ -89,3 +64,28 @@ view model =
         [ button [ floatRight, onClick Send ] [ text "send" ]
         , textarea [ floatLeft, style [ ( "width", "90%" ) ], onInput Content ] []
         ]
+
+
+send : String -> String -> String -> String -> Task Error Int
+send s f t m =
+    let
+        payload =
+            En.object
+                [ ( "from", En.string f )
+                , ( "to", En.string t )
+                , ( "content", En.string m )
+                , ( "cookie", En.string s )
+                ]
+    in
+        Http.fromJson (at [ "status" ] int) <|
+            Http.send Http.defaultSettings
+                { verb = "POST"
+                , headers = [ ( "Content-Type", "application/json" ) ]
+                , url = "http://localhost:3000/reply"
+                , body = Http.string <| En.encode 0 payload
+                }
+
+
+send_message : Context -> String -> Cmd Msg
+send_message ctx message =
+    perform Fail SendSucceed <| send ctx.session ctx.send_from ctx.send_to message
