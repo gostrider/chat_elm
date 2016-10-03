@@ -47,11 +47,9 @@ update ctx msg model =
             ( { model | visible = value }, Cmd.none )
 
         Send ->
-            (Debug.log <| toString model.message)
             ( model, send_message ctx model.message )
 
         SendSucceed resp ->
-            (Debug.log <| toString resp)
             ( { model | action = toString resp }, Cmd.none )
 
         Fail err ->

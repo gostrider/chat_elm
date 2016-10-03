@@ -7,6 +7,7 @@ import ActionBar
 import CSS
 import Html.App as App
 import Html exposing (Html, div)
+import WebSocket as WS
 
 
 main =
@@ -48,7 +49,8 @@ update msg model =
             in
                 { model | login = login' }
                     ! [ Cmd.map UpdateLogin effectLogin
-                      , Cmd.map UpdateChatList <| ChatItem.getChatList login'.user.id
+                      , Cmd.map UpdateChatList <|
+                            ChatItem.getChatList login'.user.id
                       ]
 
         UpdateLogin msgLogin ->
@@ -65,7 +67,8 @@ update msg model =
             in
                 { model | chatList = chatList' }
                     ! [ Cmd.map UpdateChatList effectChatList
-                      , Cmd.map UpdateMsgList <| MessageItem.getMessageList user_id model.login.user.id
+                      , Cmd.map UpdateMsgList <|
+                            MessageItem.getMessageList user_id model.login.user.id
                       ]
 
         UpdateChatList msgChatList ->
@@ -130,3 +133,12 @@ view model =
 
         _ ->
             App.map UpdateLogin <| Login.view model.login
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    let
+        subMsgList =
+            WS.listen "ws://localhost:4080" MessageItem.RethinkChanges
+    in
+        Sub.map UpdateMsgList subMsgList
