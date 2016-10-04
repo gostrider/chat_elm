@@ -1,21 +1,22 @@
 module RMain exposing (..)
 
-import Login
-import ChatItem
-import MessageItem
 import ActionBar
+import ChatItem
 import CSS
+import Login
+import MessageItem
 import Html.App as App
 import Html exposing (Html, div)
 import WebSocket as WS
 
 
+main : Program Never
 main =
     App.program
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         }
 
 
@@ -37,6 +38,13 @@ type Msg
 init : ( Model, Cmd Msg )
 init =
     ( Model Login.init ChatItem.init MessageItem.init ActionBar.init, Cmd.none )
+
+
+
+{- connected=028603668faa9786565cd4c32c7eab47; Path=/; HttpOnly
+   "8428456081706861777154255320160518025200"
+   "8774365768848866071800687020160905053839"
+-}
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
