@@ -1,4 +1,4 @@
-module RMain exposing (..)
+module Main exposing (..)
 
 import ActionBar
 import ChatItem
@@ -41,7 +41,8 @@ init =
 
 
 
-{- connected=028603668faa9786565cd4c32c7eab47; Path=/; HttpOnly
+{- Sample auth:
+   connected=028603668faa9786565cd4c32c7eab47; Path=/; HttpOnly
    "8428456081706861777154255320160518025200"
    "8774365768848866071800687020160905053839"
 -}
@@ -103,6 +104,17 @@ update msg model =
                 { model | messageList = messageList', action = newAction }
                     ! [ Cmd.map UpdateMsgList effectMsgList
                       , Cmd.map UpdateAction effectAction
+                      ]
+
+        UpdateMsgList (MessageItem.RethinkChanges changes) ->
+            let
+                ( messageList', effectMsgList ) =
+                    MessageItem.update (MessageItem.RethinkChanges changes) model.messageList
+            in
+                { model | messageList = messageList' }
+                    ! [ Cmd.map UpdateMsgList effectMsgList
+--                      , Cmd.map UpdateChatList <|
+--                        ChatItem.getChatList model.login.user.id
                       ]
 
         UpdateMsgList msgMsgList ->

@@ -3,7 +3,7 @@ module MessageItem exposing (..)
 import CSS exposing (floatLeft, floatRight, messagePanel)
 import Html exposing (Html, br, div, text)
 import Http exposing (Error, get)
-import Json.Decode as De exposing (Decoder, at, string)
+import Json.Decode as De exposing (Decoder, at, andThen, string)
 import Task exposing (Task, perform)
 
 
@@ -68,7 +68,7 @@ view model =
 decodeChanges : Decoder MessageItem
 decodeChanges =
     at [ "event" ] string
-        `De.andThen` decodePackage
+        `andThen` decodePackage
 
 
 decodePackage : String -> Decoder MessageItem
