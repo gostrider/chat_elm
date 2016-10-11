@@ -47,7 +47,7 @@ update ctx msg model =
             ( { model | visible = value }, Cmd.none )
 
         Send ->
-            ( model, send_message ctx model.message )
+            ( { model | message = "" }, send_message ctx model.message )
 
         SendSucceed resp ->
             ( { model | action = toString resp }, Cmd.none )

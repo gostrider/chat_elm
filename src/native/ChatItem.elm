@@ -11,6 +11,8 @@ import Task exposing (Task, perform)
 type alias ChatItem =
     { avatar : String
     , body : String
+    , contact : String
+    , recipient : String
     , sender : String
     }
 
@@ -38,10 +40,10 @@ update msg model =
         GetUserChat user_id ->
             ( { model | current = user_id }, Cmd.none )
 
-        Succeed chatList' ->
-            ( { model | chatList = chatList' }, Cmd.none )
+        Succeed senders ->
+            ( { model | chatList = senders }, Cmd.none )
 
-        Fail _ ->
+        Fail err ->
             ( model, Cmd.none )
 
 
@@ -53,15 +55,17 @@ view model =
 decodeChatList : Decoder (List ChatItem)
 decodeChatList =
     De.list <|
-        De.object3 ChatItem
+        De.object5 ChatItem
             (at [ "reduction", "avatar" ] string)
             (at [ "reduction", "body" ] string)
+            (at [ "group" ] string)
+            (at [ "reduction", "recipient" ] string)
             (at [ "reduction", "sender" ] string)
 
 
 chatList : String -> Task Error (List ChatItem)
 chatList id =
-    get decodeChatList <| "http://localhost:3000/get_userlist?account=" ++ id
+    get decodeChatList <| "http://localhost:3000/userlist?account=" ++ id
 
 
 getChatList : String -> Cmd Msg
@@ -70,11 +74,9 @@ getChatList id =
 
 
 chatItem : ChatItem -> Html Msg
-chatItem { avatar, body, sender } =
-    -- TODO Wrong sender ID when last message sender is self
-    -- TODO chatItem title should always sender ID
-    div [ onClick <| GetUserChat sender ]
-        [ text sender
+chatItem { avatar, body, contact } =
+    div [ onClick <| GetUserChat contact ]
+        [ text contact
         , br [] []
         , text body
         ]

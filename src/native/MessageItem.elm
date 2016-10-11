@@ -105,7 +105,7 @@ decodeMsgList =
 messageList : String -> String -> Task Error (List MessageItem)
 messageList send_from send_to =
     get decodeMsgList <|
-        "http://localhost:3000/get_userchat?from="
+        "http://localhost:3000/userchat?from="
             ++ send_from
             ++ "&to="
             ++ send_to

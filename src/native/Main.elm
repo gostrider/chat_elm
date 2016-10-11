@@ -5,17 +5,20 @@ import ChatItem
 import CSS
 import Login
 import MessageItem
+import Navigation
 import Html.App as App
 import Html exposing (Html, div)
+import UrlParse
 import WebSocket as WS
 
 
 main : Program Never
 main =
-    App.program
+    Navigation.program UrlParse.urlParser
         { init = init
         , view = view
         , update = update
+        , urlUpdate = urlUpdate
         , subscriptions = subscriptions
         }
 
@@ -35,9 +38,10 @@ type Msg
     | UpdateAction ActionBar.Msg
 
 
-init : ( Model, Cmd Msg )
-init =
-    ( Model Login.init ChatItem.init MessageItem.init ActionBar.init, Cmd.none )
+init : String -> ( Model, Cmd Msg )
+init result =
+    urlUpdate result <|
+        Model Login.init ChatItem.init MessageItem.init ActionBar.init
 
 
 
@@ -57,7 +61,8 @@ update msg model =
                     Login.update (Login.Succeed resp) model.login
             in
                 { model | login = login' }
-                    ! [ Cmd.map UpdateLogin effectLogin
+                    ! [ Navigation.newUrl (UrlParse.toUrl "main")
+                      , Cmd.map UpdateLogin effectLogin
                       , Cmd.map UpdateChatList <|
                             ChatItem.getChatList login'.user.id
                       ]
@@ -113,8 +118,8 @@ update msg model =
             in
                 { model | messageList = messageList' }
                     ! [ Cmd.map UpdateMsgList effectMsgList
---                      , Cmd.map UpdateChatList <|
---                        ChatItem.getChatList model.login.user.id
+                      , Cmd.map UpdateChatList <|
+                            ChatItem.getChatList model.login.user.id
                       ]
 
         UpdateMsgList msgMsgList ->
@@ -162,3 +167,8 @@ subscriptions model =
             WS.listen "ws://localhost:4080" MessageItem.RethinkChanges
     in
         Sub.map UpdateMsgList subMsgList
+
+
+urlUpdate : String -> Model -> ( Model, Cmd Msg )
+urlUpdate result model =
+    ( model, Cmd.none )
