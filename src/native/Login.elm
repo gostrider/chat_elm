@@ -108,4 +108,5 @@ verify username password =
 
 auth : String -> String -> Cmd Msg
 auth username password =
-    perform Fail Succeed <| verify username password
+    -- perform Fail Succeed <| verify username password
+    verify username password |> perform Fail Succeed

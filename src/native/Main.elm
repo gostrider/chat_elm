@@ -1,20 +1,54 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import ActionBar
 import ChatItem
 import CSS
 import Login
+import Json.Decode as De exposing (Decoder, at, andThen, fail, string)
 import MessageItem
 import Navigation
 import Html.App as App
 import Html exposing (Html, div)
-import UrlParse
+import Router as R
 import WebSocket as WS
+
+
+port store : String -> Cmd msg
+
+
+port reply : (String -> msg) -> Sub msg
+
+
+port get : String -> Cmd msg
+
+
+takeEffect : Decoder String
+takeEffect =
+    at [ "event" ] string
+        `andThen` decodePackage
+
+
+decodePackage : String -> Decoder String
+decodePackage event =
+    case event of
+        "get" ->
+            decodeResp
+
+        "post" ->
+            decodeResp
+
+        _ ->
+            fail "unknown event"
+
+
+decodeResp : Decoder String
+decodeResp =
+    at [ "response" ] string
 
 
 main : Program Never
 main =
-    Navigation.program UrlParse.urlParser
+    Navigation.program R.parser
         { init = init
         , view = view
         , update = update
@@ -28,6 +62,7 @@ type alias Model =
     , chatList : ChatItem.Model
     , messageList : MessageItem.Model
     , action : ActionBar.Model
+    , route : R.Route
     }
 
 
@@ -36,12 +71,30 @@ type Msg
     | UpdateChatList ChatItem.Msg
     | UpdateMsgList MessageItem.Msg
     | UpdateAction ActionBar.Msg
+    | ReturnBack String
 
 
-init : String -> ( Model, Cmd Msg )
+init : Result String R.Route -> ( Model, Cmd Msg )
 init result =
-    urlUpdate result <|
-        Model Login.init ChatItem.init MessageItem.init ActionBar.init
+    let
+        login =
+            Login.init
+
+        chat =
+            ChatItem.init
+
+        message =
+            MessageItem.init
+
+        action =
+            ActionBar.init
+
+        route =
+            R.routeFromResult result
+    in
+        ( Model login chat message action route
+        , get "key"
+        )
 
 
 
@@ -61,10 +114,10 @@ update msg model =
                     Login.update (Login.Succeed resp) model.login
             in
                 { model | login = login' }
-                    ! [ Navigation.newUrl (UrlParse.toUrl "main")
+                    ! [ Navigation.newUrl "main"
                       , Cmd.map UpdateLogin effectLogin
-                      , Cmd.map UpdateChatList <|
-                            ChatItem.getChatList login'.user.id
+                      , ChatItem.getChatList login'.user.id
+                            |> Cmd.map UpdateChatList
                       ]
 
         UpdateLogin msgLogin ->
@@ -81,8 +134,8 @@ update msg model =
             in
                 { model | chatList = chatList' }
                     ! [ Cmd.map UpdateChatList effectChatList
-                      , Cmd.map UpdateMsgList <|
-                            MessageItem.getMessageList user_id model.login.user.id
+                      , MessageItem.getMessageList user_id model.login.user.id
+                            |> Cmd.map UpdateMsgList
                       ]
 
         UpdateChatList msgChatList ->
@@ -118,8 +171,8 @@ update msg model =
             in
                 { model | messageList = messageList' }
                     ! [ Cmd.map UpdateMsgList effectMsgList
-                      , Cmd.map UpdateChatList <|
-                            ChatItem.getChatList model.login.user.id
+                      , ChatItem.getChatList model.login.user.id
+                            |> Cmd.map UpdateChatList
                       ]
 
         UpdateMsgList msgMsgList ->
@@ -142,12 +195,29 @@ update msg model =
             in
                 ( { model | action = newAction }, Cmd.map UpdateAction effectAction )
 
+        ReturnBack future ->
+            let
+                resp =
+                    future |> De.decodeString takeEffect >> Result.withDefault "error"
+            in
+                (Debug.log resp)
+                    ( model, Cmd.none )
+
+
+urlUpdate : Result String R.Route -> Model -> ( Model, Cmd Msg )
+urlUpdate result model =
+    case R.routeFromResult result of
+        (R.RouteMain) as unwrapRoute ->
+            ( { model | route = unwrapRoute }, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )
+
 
 view : Model -> Html Msg
 view model =
-    case model.login.status of
-        "success" ->
-            -- TODO Refine CSS ordering
+    case model.route of
+        R.RouteMain ->
             div []
                 [ App.map UpdateChatList <| ChatItem.view model.chatList
                 , div [ CSS.rightPanel ]
@@ -160,15 +230,29 @@ view model =
             App.map UpdateLogin <| Login.view model.login
 
 
+
+-- case model.login.status of
+--     "success" ->
+--         -- TODO Refine CSS ordering
+--         div []
+--             [ App.map UpdateChatList <| ChatItem.view model.chatList
+--             , div [ CSS.rightPanel ]
+--                 [ App.map UpdateMsgList <| MessageItem.view model.messageList
+--                 , App.map UpdateAction <| ActionBar.view model.action
+--                 ]
+--             ]
+--
+--     _ ->
+--         App.map UpdateLogin <| Login.view model.login
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     let
         subMsgList =
             WS.listen "ws://localhost:4080" MessageItem.RethinkChanges
     in
-        Sub.map UpdateMsgList subMsgList
-
-
-urlUpdate : String -> Model -> ( Model, Cmd Msg )
-urlUpdate result model =
-    ( model, Cmd.none )
+        Sub.batch
+            [ Sub.map UpdateMsgList subMsgList
+            , reply ReturnBack
+            ]
