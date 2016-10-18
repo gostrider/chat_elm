@@ -3,52 +3,27 @@ port module Main exposing (..)
 import ActionBar
 import ChatItem
 import CSS
+import Interpol
 import Login
-import Json.Decode as De exposing (Decoder, at, andThen, fail, string)
 import MessageItem
 import Navigation
 import Html.App as App
 import Html exposing (Html, div)
-import Router as R
-import WebSocket as WS
+import Json.Encode as En exposing (string)
+import Router
+import WebSocket
 
 
-port store : String -> Cmd msg
-
-
-port reply : (String -> msg) -> Sub msg
-
-
-port get : String -> Cmd msg
-
-
-takeEffect : Decoder String
-takeEffect =
-    at [ "event" ] string
-        `andThen` decodePackage
-
-
-decodePackage : String -> Decoder String
-decodePackage event =
-    case event of
-        "get" ->
-            decodeResp
-
-        "post" ->
-            decodeResp
-
-        _ ->
-            fail "unknown event"
-
-
-decodeResp : Decoder String
-decodeResp =
-    at [ "response" ] string
+{- Sample auth:
+   connected=028603668faa9786565cd4c32c7eab47; Path=/; HttpOnly
+   "8428456081706861777154255320160518025200"
+   "8774365768848866071800687020160905053839"
+-}
 
 
 main : Program Never
 main =
-    Navigation.program R.parser
+    Navigation.program Router.parser
         { init = init
         , view = view
         , update = update
@@ -62,7 +37,8 @@ type alias Model =
     , chatList : ChatItem.Model
     , messageList : MessageItem.Model
     , action : ActionBar.Model
-    , route : R.Route
+    , interpol : Interpol.Model
+    , route : Router.Route
     }
 
 
@@ -71,10 +47,10 @@ type Msg
     | UpdateChatList ChatItem.Msg
     | UpdateMsgList MessageItem.Msg
     | UpdateAction ActionBar.Msg
-    | ReturnBack String
+    | UpdatePort Interpol.Msg
 
 
-init : Result String R.Route -> ( Model, Cmd Msg )
+init : Result String Router.Route -> ( Model, Cmd Msg )
 init result =
     let
         login =
@@ -89,20 +65,15 @@ init result =
         action =
             ActionBar.init
 
+        interpol =
+            Interpol.init
+
         route =
-            R.routeFromResult result
+            Router.routeFromResult result
     in
-        ( Model login chat message action route
-        , get "key"
+        ( Model login chat message action interpol route
+        , Cmd.none
         )
-
-
-
-{- Sample auth:
-   connected=028603668faa9786565cd4c32c7eab47; Path=/; HttpOnly
-   "8428456081706861777154255320160518025200"
-   "8774365768848866071800687020160905053839"
--}
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -112,12 +83,19 @@ update msg model =
             let
                 ( login', effectLogin ) =
                     Login.update (Login.Succeed resp) model.login
+
+                encodeStore =
+                    En.object
+                        [ ( "id", string login'.user.id )
+                        , ( "uuid", string login'.user.uuid )
+                        , ( "session", string login'.user.session )
+                        ]
             in
                 { model | login = login' }
-                    ! [ Navigation.newUrl "main"
+                    ! [ Interpol.store << En.encode 0 <| encodeStore
                       , Cmd.map UpdateLogin effectLogin
-                      , ChatItem.getChatList login'.user.id
-                            |> Cmd.map UpdateChatList
+                      , Cmd.map UpdateChatList << ChatItem.getChatList <| login'.user.id
+                      , Navigation.newUrl "#main"
                       ]
 
         UpdateLogin msgLogin ->
@@ -134,8 +112,8 @@ update msg model =
             in
                 { model | chatList = chatList' }
                     ! [ Cmd.map UpdateChatList effectChatList
-                      , MessageItem.getMessageList user_id model.login.user.id
-                            |> Cmd.map UpdateMsgList
+                      , Cmd.map UpdateMsgList <|
+                            MessageItem.getMessageList user_id model.login.user.id
                       ]
 
         UpdateChatList msgChatList ->
@@ -195,29 +173,29 @@ update msg model =
             in
                 ( { model | action = newAction }, Cmd.map UpdateAction effectAction )
 
-        ReturnBack future ->
+        UpdatePort msgPort ->
             let
-                resp =
-                    future |> De.decodeString takeEffect >> Result.withDefault "error"
+                ( newP, effectP ) =
+                    Interpol.update msgPort model.interpol
             in
-                (Debug.log resp)
-                    ( model, Cmd.none )
+                ( { model | interpol = newP }, Cmd.map UpdatePort effectP )
 
 
-urlUpdate : Result String R.Route -> Model -> ( Model, Cmd Msg )
+urlUpdate : Result String Router.Route -> Model -> ( Model, Cmd Msg )
 urlUpdate result model =
-    case R.routeFromResult result of
-        (R.RouteMain) as unwrapRoute ->
-            ( { model | route = unwrapRoute }, Cmd.none )
-
-        _ ->
-            ( model, Cmd.none )
+    let
+        unwrapRoute =
+            Router.routeFromResult result
+    in
+        case unwrapRoute of
+            unwrapRoute ->
+                ( { model | route = unwrapRoute }, Cmd.none )
 
 
 view : Model -> Html Msg
 view model =
     case model.route of
-        R.RouteMain ->
+        Router.RouteMain ->
             div []
                 [ App.map UpdateChatList <| ChatItem.view model.chatList
                 , div [ CSS.rightPanel ]
@@ -250,9 +228,12 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     let
         subMsgList =
-            WS.listen "ws://localhost:4080" MessageItem.RethinkChanges
+            WebSocket.listen "ws://localhost:4080" MessageItem.RethinkChanges
+
+        subInterpol =
+            Interpol.reply Interpol.Return
     in
         Sub.batch
             [ Sub.map UpdateMsgList subMsgList
-            , reply ReturnBack
+            , Sub.map UpdatePort subInterpol
             ]

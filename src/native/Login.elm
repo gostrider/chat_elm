@@ -35,7 +35,7 @@ type Msg
 
 init : Model
 init =
-    Model "" "" "" <| AuthResp "" "" ""
+    Model "" "" "" (AuthResp "" "" "")
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

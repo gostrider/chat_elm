@@ -13,8 +13,8 @@ type Route
 matchers : Parser (Route -> a) a
 matchers =
     oneOf
-        [ format RouteMain <| s "main"
-        , format RouteNothing <| s ""
+        [ format RouteMain (s "main")
+        , format RouteNothing (s "")
         ]
 
 
@@ -37,5 +37,5 @@ routeFromResult result =
             route
 
         Err err ->
-            (err |> toString >> Debug.log)
+            (Debug.log << toString <| err)
                 RouteNothing
