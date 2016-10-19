@@ -37,11 +37,15 @@ app.ports.get.subscribe(function(key) {
     if (value === null) value = "error";
     try {
         value = JSON.parse(value);
+        app.ports.reply.send(JSON.stringify({
+            "event" : "get",
+            "response" : value
+        }));
     } catch (e) {
-        value = "error";
+        app.ports.reply.send(JSON.stringify({
+            "event" : "error",
+            "response" : "failed_parseJSON"
+        }));
     }
-    app.ports.reply.send(JSON.stringify({
-        "event" : "get",
-        "response" : value
-    }));
+
 });

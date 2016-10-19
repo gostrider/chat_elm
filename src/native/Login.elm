@@ -51,6 +51,8 @@ update msg model =
             ( model, auth model.username model.password )
 
         Succeed resp ->
+            -- TODO: status maybe removeable
+            -- as Type checking can ensure authentication
             ( { model
                 | status = "success"
                 , user = resp

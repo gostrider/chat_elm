@@ -72,7 +72,7 @@ init result =
             Router.routeFromResult result
     in
         ( Model login chat message action interpol route
-        , Cmd.none
+        , Interpol.get "user_auth"
         )
 
 

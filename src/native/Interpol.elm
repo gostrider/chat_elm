@@ -59,8 +59,7 @@ update msg model =
                 interpolDecode =
                     De.decodeString responseDecoder interpolated
             in
-                (Debug.log << toString <| interpolDecode)
-                    ( { model | interpol = interpolDecode }, Cmd.none )
+                ( { model | interpol = interpolDecode }, Cmd.none )
 
 
 stringDecoder : Decoder Delivery
@@ -86,6 +85,9 @@ packageDecoder event =
             authDecoder
 
         "post" ->
+            stringDecoder
+
+        "error" ->
             stringDecoder
 
         _ ->
