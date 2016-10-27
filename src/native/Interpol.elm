@@ -13,7 +13,7 @@ import Json.Decode as De
 
 
 type alias Model =
-    { interpol : Result String Delivery
+    { interpol : Delivery
     }
 
 
@@ -48,7 +48,7 @@ port get : String -> Cmd msg
 
 init : Model
 init =
-    Model << Ok << ResponseString <| "init"
+    Model << ResponseString <| "init"
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -58,6 +58,7 @@ update msg model =
             let
                 interpolDecode =
                     De.decodeString responseDecoder interpolated
+                        |> Result.withDefault (ResponseString "err")
             in
                 ( { model | interpol = interpolDecode }, Cmd.none )
 
@@ -74,7 +75,7 @@ authDecoder =
         (De.object3 RespAuth
             (at [ "response", "id" ] string)
             (at [ "response", "uuid" ] string)
-            (at [ "response", "user_session" ] string)
+            (at [ "response", "session" ] string)
         )
 
 
@@ -97,3 +98,16 @@ packageDecoder event =
 responseDecoder : Decoder Delivery
 responseDecoder =
     at [ "event" ] string `andThen` packageDecoder
+
+
+
+{-
+   unwrapResult : Result String Delivery -> Delivery
+   unwrapResult content =
+       case content of
+           Ok val ->
+               val
+
+           Err err ->
+               err
+-}

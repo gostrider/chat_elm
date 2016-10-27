@@ -178,7 +178,9 @@ update msg model =
                 ( newP, effectP ) =
                     Interpol.update msgPort model.interpol
             in
-                ( { model | interpol = newP }, Cmd.map UpdatePort effectP )
+                { model | interpol = newP }
+                    ! [ Cmd.map UpdatePort effectP
+                      ]
 
 
 urlUpdate : Result String Router.Route -> Model -> ( Model, Cmd Msg )
