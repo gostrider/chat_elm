@@ -98,16 +98,3 @@ packageDecoder event =
 responseDecoder : Decoder Delivery
 responseDecoder =
     at [ "event" ] string `andThen` packageDecoder
-
-
-
-{-
-   unwrapResult : Result String Delivery -> Delivery
-   unwrapResult content =
-       case content of
-           Ok val ->
-               val
-
-           Err err ->
-               err
--}
