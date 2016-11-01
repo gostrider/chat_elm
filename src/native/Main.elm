@@ -79,95 +79,78 @@ init result =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        UpdateLogin (Login.Succeed resp) ->
-            let
-                ( login', effectLogin ) =
-                    Login.update (Login.Succeed resp) model.login
-
-                encodeStore =
-                    En.object
-                        [ ( "id", string login'.user.id )
-                        , ( "uuid", string login'.user.uuid )
-                        , ( "session", string login'.user.session )
-                        ]
-            in
-                { model | login = login' }
-                    ! [ Interpol.store << En.encode 0 <| encodeStore
-                      , Cmd.map UpdateLogin effectLogin
-                      , Cmd.map UpdateChatList << ChatItem.getChatList <| login'.user.id
-                      , Navigation.newUrl "#main"
-                      ]
-
         UpdateLogin msgLogin ->
             let
                 ( login', effectLogin ) =
                     Login.update msgLogin model.login
-            in
-                ( { model | login = login' }, Cmd.map UpdateLogin effectLogin )
 
-        UpdateChatList (ChatItem.GetUserChat user_id) ->
-            let
-                ( chatList', effectChatList ) =
-                    ChatItem.update (ChatItem.GetUserChat user_id) model.chatList
+                loginCmd =
+                    case msgLogin of
+                        Login.Succeed _ ->
+                            [ Interpol.store (Login.encodeAuth login') ]
+
+                        _ ->
+                            [ Cmd.none ]
             in
-                { model | chatList = chatList' }
-                    ! [ Cmd.map UpdateChatList effectChatList
-                      , Cmd.map UpdateMsgList << MessageItem.getMessageList user_id <| model.login.user.id
-                      ]
+                { model | login = login' }
+                    ! ([ Cmd.map UpdateLogin effectLogin
+                       , Cmd.map UpdateChatList << ChatItem.getChatList <| login'.user.id
+                       , Navigation.newUrl "#main"
+                       ]
+                        ++ loginCmd
+                      )
 
         UpdateChatList msgChatList ->
             let
                 ( chatList', effectChatList ) =
                     ChatItem.update msgChatList model.chatList
+
+                chatListCmd =
+                    case msgChatList of
+                        ChatItem.GetUserChat user_id ->
+                            [ Cmd.map UpdateMsgList << MessageItem.getMessageList user_id <| model.login.user.id
+                            ]
+
+                        _ ->
+                            [ Cmd.none ]
             in
-                ( { model | chatList = chatList' }, Cmd.map UpdateChatList effectChatList )
-
-        UpdateMsgList (MessageItem.Succeed messages') ->
-            let
-                context =
-                    { send_from = model.login.user.id
-                    , send_to = model.chatList.current
-                    , session = model.login.user.session
-                    }
-
-                ( messageList', effectMsgList ) =
-                    MessageItem.update (MessageItem.Succeed messages') model.messageList
-
-                ( newAction, effectAction ) =
-                    ActionBar.update context (ActionBar.Visible "visible") model.action
-            in
-                { model | messageList = messageList', action = newAction }
-                    ! [ Cmd.map UpdateMsgList effectMsgList
-                      , Cmd.map UpdateAction effectAction
-                      ]
-
-        UpdateMsgList (MessageItem.RethinkChanges changes) ->
-            let
-                ( messageList', effectMsgList ) =
-                    MessageItem.update (MessageItem.RethinkChanges changes) model.messageList
-            in
-                { model | messageList = messageList' }
-                    ! [ Cmd.map UpdateMsgList effectMsgList
-                      , Cmd.map UpdateChatList << ChatItem.getChatList model.login.user.id
-                      ]
+                { model | chatList = chatList' }
+                    ! ([ Cmd.map UpdateChatList effectChatList ]
+                        ++ chatListCmd
+                      )
 
         UpdateMsgList msgMsgList ->
             let
                 ( newMsgList, effectMsgList ) =
                     MessageItem.update msgMsgList model.messageList
+
+                msgListCmd =
+                    case msgMsgList of
+                        MessageItem.RethinkChanges changes ->
+                            [ Cmd.map UpdateChatList << ChatItem.getChatList <| model.login.user.id ]
+
+                        _ ->
+                            [ Cmd.none ]
+
+                ( newAction, effectAction ) =
+                    case msgMsgList of
+                        MessageItem.Succeed messages' ->
+                            ActionBar.update (context model) (ActionBar.Visible "visible") model.action
+
+                        _ ->
+                            ( model.action, Cmd.none )
             in
-                ( { model | messageList = newMsgList }, Cmd.map UpdateMsgList effectMsgList )
+                { model | messageList = newMsgList, action = newAction }
+                    ! ([ Cmd.map UpdateMsgList effectMsgList
+                       , Cmd.map UpdateAction effectAction
+                       ]
+                        ++ msgListCmd
+                      )
 
         UpdateAction msgAction ->
             let
-                context =
-                    { send_from = model.login.user.id
-                    , send_to = model.chatList.current
-                    , session = model.login.user.session
-                    }
-
                 ( newAction, effectAction ) =
-                    ActionBar.update context msgAction model.action
+                    ActionBar.update (context model) msgAction model.action
             in
                 ( { model | action = newAction }, Cmd.map UpdateAction effectAction )
 
@@ -177,8 +160,8 @@ update msg model =
                     Interpol.update msgPort model.interpol
 
                 newLogin =
-                    Interpol.interpolLogin newP.interpol
-                        |> Login.Model "" "" "success"
+                    Login.Model "" "" "" <|
+                        Interpol.interpolLogin newP.interpol
             in
                 ( { model | login = newLogin, interpol = newP }, Cmd.map UpdatePort effectP )
 
@@ -196,22 +179,18 @@ urlUpdate result model =
 
 view : Model -> Html Msg
 view model =
-    case model.login.status of
-        "success" ->
-            div []
-                [ ChatItem.view model.chatList
-                    |> App.map UpdateChatList
-                , div [ CSS.rightPanel ]
-                    [ MessageItem.view model.messageList
-                        |> App.map UpdateMsgList
-                    , ActionBar.view model.action
-                        |> App.map UpdateAction
-                    ]
-                ]
-
-        _ ->
-            Login.view model.login
-                |> App.map UpdateLogin
+    --            div []
+    --                [ ChatItem.view model.chatList
+    --                    |> App.map UpdateChatList
+    --                , div [ CSS.rightPanel ]
+    --                    [ MessageItem.view model.messageList
+    --                        |> App.map UpdateMsgList
+    --                    , ActionBar.view model.action
+    --                        |> App.map UpdateAction
+    --                    ]
+    --                ]
+    App.map UpdateLogin <|
+        Login.view model.login
 
 
 subscriptions : Model -> Sub Msg
@@ -224,3 +203,11 @@ subscriptions model =
             [ Sub.map UpdateMsgList subMsgList
             , Sub.map UpdatePort (Interpol.reply Interpol.Return)
             ]
+
+
+context : Model -> { send_from : String, send_to : String, session : String }
+context model =
+    { send_from = model.login.user.id
+    , send_to = model.chatList.current
+    , session = model.login.user.session
+    }

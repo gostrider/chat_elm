@@ -111,3 +111,13 @@ verify username password =
 auth : String -> String -> Cmd Msg
 auth username password =
     perform Fail Succeed (verify username password)
+
+
+encodeAuth : Model -> String
+encodeAuth model =
+    En.object
+        [ ( "id", En.string model.user.id )
+        , ( "uuid", En.string model.user.uuid )
+        , ( "session", En.string model.user.session )
+        ]
+        |> En.encode 0

@@ -26,6 +26,7 @@ type alias Context =
 
 type Msg
     = Send
+    | Logout
     | Content String
     | Visible String
     | SendSucceed Int
@@ -40,6 +41,8 @@ init =
 update : Context -> Msg -> Model -> ( Model, Cmd Msg )
 update ctx msg model =
     case msg of
+        Logout ->
+            ( model, Cmd.none )
         Content input ->
             ( { model | message = input }, Cmd.none )
 
@@ -60,6 +63,7 @@ view : Model -> Html Msg
 view model =
     div [ actionPanel, style [ ( "visibility", model.visible ) ] ]
         [ button [ floatRight, onClick Send ] [ text "send" ]
+        , button [] [text "logout"]
         , textarea [ floatLeft, style [ ( "width", "90%" ) ], onInput Content ] []
         ]
 
