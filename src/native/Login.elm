@@ -26,9 +26,9 @@ type alias AuthResp =
 
 
 type Msg
-    = Username String
+    = Auth
+    | Username String
     | Password String
-    | Auth
     | Succeed AuthResp
     | Fail Error
 
@@ -99,16 +99,15 @@ verify username password =
                 , ( "password", En.string password )
                 ]
     in
-        Http.fromJson decoder <|
-            Http.send Http.defaultSettings
-                { verb = "POST"
-                , headers = [ ( "Content-Type", "application/json" ) ]
-                , url = "http://localhost:3000/login"
-                , body = Http.string <| En.encode 0 payload
-                }
+        { verb = "POST"
+        , headers = [ ( "Content-Type", "application/json" ) ]
+        , url = "http://localhost:3000/login"
+        , body = Http.string <| En.encode 0 payload
+        }
+            |> Http.send Http.defaultSettings
+            |> Http.fromJson decoder
 
 
 auth : String -> String -> Cmd Msg
 auth username password =
-    -- perform Fail Succeed <| verify username password
-    verify username password |> perform Fail Succeed
+    perform Fail Succeed (verify username password)

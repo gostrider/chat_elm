@@ -25,7 +25,6 @@ app.ports.store.subscribe(function(valueToStore) {
     } else {
         result = "error";
     }
-    console.log(result + "_" + valueToStore);
     app.ports.reply.send(JSON.stringify({
         "event" : "post",
         "response" : result

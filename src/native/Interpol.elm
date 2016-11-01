@@ -57,7 +57,8 @@ update msg model =
         Return interpolated ->
             let
                 interpolDecode =
-                    De.decodeString responseDecoder interpolated
+                    interpolated
+                        |> De.decodeString responseDecoder
                         |> Result.withDefault (ResponseString "err")
             in
                 ( { model | interpol = interpolDecode }, Cmd.none )
@@ -98,3 +99,13 @@ packageDecoder event =
 responseDecoder : Decoder Delivery
 responseDecoder =
     at [ "event" ] string `andThen` packageDecoder
+
+
+interpolLogin : Delivery -> RespAuth
+interpolLogin delivery =
+    case delivery of
+        ResponseAuthenticate val ->
+            val
+
+        ResponseString _ ->
+            RespAuth "" "" ""

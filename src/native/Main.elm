@@ -112,8 +112,7 @@ update msg model =
             in
                 { model | chatList = chatList' }
                     ! [ Cmd.map UpdateChatList effectChatList
-                      , Cmd.map UpdateMsgList <|
-                            MessageItem.getMessageList user_id model.login.user.id
+                      , Cmd.map UpdateMsgList << MessageItem.getMessageList user_id <| model.login.user.id
                       ]
 
         UpdateChatList msgChatList ->
@@ -149,8 +148,7 @@ update msg model =
             in
                 { model | messageList = messageList' }
                     ! [ Cmd.map UpdateMsgList effectMsgList
-                      , ChatItem.getChatList model.login.user.id
-                            |> Cmd.map UpdateChatList
+                      , Cmd.map UpdateChatList << ChatItem.getChatList model.login.user.id
                       ]
 
         UpdateMsgList msgMsgList ->
@@ -177,10 +175,12 @@ update msg model =
             let
                 ( newP, effectP ) =
                     Interpol.update msgPort model.interpol
+
+                newLogin =
+                    Interpol.interpolLogin newP.interpol
+                        |> Login.Model "" "" "success"
             in
-                { model | interpol = newP }
-                    ! [ Cmd.map UpdatePort effectP
-                      ]
+                ( { model | login = newLogin, interpol = newP }, Cmd.map UpdatePort effectP )
 
 
 urlUpdate : Result String Router.Route -> Model -> ( Model, Cmd Msg )
@@ -196,34 +196,22 @@ urlUpdate result model =
 
 view : Model -> Html Msg
 view model =
-    case model.route of
-        Router.RouteMain ->
+    case model.login.status of
+        "success" ->
             div []
-                [ App.map UpdateChatList <| ChatItem.view model.chatList
+                [ ChatItem.view model.chatList
+                    |> App.map UpdateChatList
                 , div [ CSS.rightPanel ]
-                    [ App.map UpdateMsgList <| MessageItem.view model.messageList
-                    , App.map UpdateAction <| ActionBar.view model.action
+                    [ MessageItem.view model.messageList
+                        |> App.map UpdateMsgList
+                    , ActionBar.view model.action
+                        |> App.map UpdateAction
                     ]
                 ]
 
         _ ->
-            App.map UpdateLogin <| Login.view model.login
-
-
-
--- case model.login.status of
---     "success" ->
---         -- TODO Refine CSS ordering
---         div []
---             [ App.map UpdateChatList <| ChatItem.view model.chatList
---             , div [ CSS.rightPanel ]
---                 [ App.map UpdateMsgList <| MessageItem.view model.messageList
---                 , App.map UpdateAction <| ActionBar.view model.action
---                 ]
---             ]
---
---     _ ->
---         App.map UpdateLogin <| Login.view model.login
+            Login.view model.login
+                |> App.map UpdateLogin
 
 
 subscriptions : Model -> Sub Msg
@@ -231,11 +219,8 @@ subscriptions model =
     let
         subMsgList =
             WebSocket.listen "ws://localhost:4080" MessageItem.RethinkChanges
-
-        subInterpol =
-            Interpol.reply Interpol.Return
     in
         Sub.batch
             [ Sub.map UpdateMsgList subMsgList
-            , Sub.map UpdatePort subInterpol
+            , Sub.map UpdatePort (Interpol.reply Interpol.Return)
             ]
