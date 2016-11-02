@@ -43,6 +43,7 @@ update ctx msg model =
     case msg of
         Logout ->
             ( model, Cmd.none )
+
         Content input ->
             ( { model | message = input }, Cmd.none )
 
@@ -63,7 +64,7 @@ view : Model -> Html Msg
 view model =
     div [ actionPanel, style [ ( "visibility", model.visible ) ] ]
         [ button [ floatRight, onClick Send ] [ text "send" ]
-        , button [] [text "logout"]
+        , button [ onClick Logout ] [ text "logout" ]
         , textarea [ floatLeft, style [ ( "width", "90%" ) ], onInput Content ] []
         ]
 
@@ -79,15 +80,15 @@ send s f t m =
                 , ( "cookie", En.string s )
                 ]
     in
-        Http.fromJson (at [ "status" ] int) <|
-            Http.send Http.defaultSettings
-                { verb = "POST"
-                , headers = [ ( "Content-Type", "application/json" ) ]
-                , url = "http://localhost:3000/reply"
-                , body = Http.string <| En.encode 0 payload
-                }
+        Http.send Http.defaultSettings
+            { verb = "POST"
+            , headers = [ ( "Content-Type", "application/json" ) ]
+            , url = "http://localhost:3000/reply"
+            , body = Http.string <| En.encode 0 payload
+            }
+            |> Http.fromJson (at [ "status" ] int)
 
 
 send_message : Context -> String -> Cmd Msg
 send_message ctx message =
-    perform Fail SendSucceed <| send ctx.session ctx.send_from ctx.send_to message
+    perform Fail SendSucceed (send ctx.session ctx.send_from ctx.send_to message)

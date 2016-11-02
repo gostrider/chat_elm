@@ -25,10 +25,10 @@ app.ports.store.subscribe(function(valueToStore) {
     } else {
         result = "error";
     }
-    app.ports.reply.send(JSON.stringify({
-        "event" : "post",
-        "response" : result
-    }));
+//    app.ports.reply.send(JSON.stringify({
+//        "event" : "post",
+//        "response" : result
+//    }));
 });
 
 app.ports.get.subscribe(function(key) {

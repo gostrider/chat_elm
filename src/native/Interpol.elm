@@ -48,7 +48,7 @@ port get : String -> Cmd msg
 
 init : Model
 init =
-    Model << ResponseString <| "init"
+    Model << ResponseString <| ""
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -101,11 +101,11 @@ responseDecoder =
     at [ "event" ] string `andThen` packageDecoder
 
 
-interpolLogin : Delivery -> RespAuth
+interpolLogin : Delivery -> (String, RespAuth)
 interpolLogin delivery =
     case delivery of
         ResponseAuthenticate val ->
-            val
+            ( "succeed", val )
 
         ResponseString _ ->
-            RespAuth "" "" ""
+            ( "", RespAuth "" "" "" )

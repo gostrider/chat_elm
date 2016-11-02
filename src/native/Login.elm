@@ -54,7 +54,7 @@ update msg model =
             -- TODO: status maybe removeable
             -- as Type checking can ensure authentication
             ( { model
-                | status = "success"
+                | status = "succeed"
                 , user = resp
               }
             , Cmd.none
@@ -115,9 +115,12 @@ auth username password =
 
 encodeAuth : Model -> String
 encodeAuth model =
-    En.object
-        [ ( "id", En.string model.user.id )
-        , ( "uuid", En.string model.user.uuid )
-        , ( "session", En.string model.user.session )
-        ]
-        |> En.encode 0
+    let
+        payload =
+            En.object
+                [ ( "id", En.string model.user.id )
+                , ( "uuid", En.string model.user.uuid )
+                , ( "session", En.string model.user.session )
+                ]
+    in
+        En.encode 0 payload

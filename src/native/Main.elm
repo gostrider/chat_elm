@@ -9,7 +9,6 @@ import MessageItem
 import Navigation
 import Html.App as App
 import Html exposing (Html, div)
-import Json.Encode as En exposing (string)
 import Router
 import WebSocket
 
@@ -94,7 +93,9 @@ update msg model =
             in
                 { model | login = login' }
                     ! ([ Cmd.map UpdateLogin effectLogin
-                       , Cmd.map UpdateChatList << ChatItem.getChatList <| login'.user.id
+                       , Cmd.map UpdateChatList <|
+                            ChatItem.getChatList <|
+                                login'.user.id
                        , Navigation.newUrl "#main"
                        ]
                         ++ loginCmd
@@ -108,7 +109,9 @@ update msg model =
                 chatListCmd =
                     case msgChatList of
                         ChatItem.GetUserChat user_id ->
-                            [ Cmd.map UpdateMsgList << MessageItem.getMessageList user_id <| model.login.user.id
+                            [ Cmd.map UpdateMsgList <|
+                                MessageItem.getMessageList user_id <|
+                                    model.login.user.id
                             ]
 
                         _ ->
@@ -127,7 +130,10 @@ update msg model =
                 msgListCmd =
                     case msgMsgList of
                         MessageItem.RethinkChanges changes ->
-                            [ Cmd.map UpdateChatList << ChatItem.getChatList <| model.login.user.id ]
+                            [ Cmd.map UpdateChatList <|
+                                ChatItem.getChatList <|
+                                    model.login.user.id
+                            ]
 
                         _ ->
                             [ Cmd.none ]
@@ -149,21 +155,36 @@ update msg model =
 
         UpdateAction msgAction ->
             let
-                ( newAction, effectAction ) =
-                    ActionBar.update (context model) msgAction model.action
+--                ( newAction, effectAction ) =
+--                    ActionBar.update (context model) msgAction model.action
+
+                (newAction, effectAction ) =
+                    case msgAction of
+                        ActionBar.Logout ->
+                            ActionBar.update (context model) msgAction model.action
+
+                        _ ->
+                            [ Cmd.none ]
             in
-                ( { model | action = newAction }, Cmd.map UpdateAction effectAction )
+                ( { model | action = newAction }
+                , Cmd.map UpdateAction effectAction
+                )
 
         UpdatePort msgPort ->
             let
-                ( newP, effectP ) =
+                ( newPort, effectPort ) =
                     Interpol.update msgPort model.interpol
 
                 newLogin =
-                    Login.Model "" "" "" <|
-                        Interpol.interpolLogin newP.interpol
+                    let
+                        ( status, login' ) =
+                            Interpol.interpolLogin newPort.interpol
+                    in
+                        Login.Model "" "" status login'
             in
-                ( { model | login = newLogin, interpol = newP }, Cmd.map UpdatePort effectP )
+                ( { model | login = newLogin, interpol = newPort }
+                , Cmd.map UpdatePort effectPort
+                )
 
 
 urlUpdate : Result String Router.Route -> Model -> ( Model, Cmd Msg )
@@ -179,18 +200,22 @@ urlUpdate result model =
 
 view : Model -> Html Msg
 view model =
-    --            div []
-    --                [ ChatItem.view model.chatList
-    --                    |> App.map UpdateChatList
-    --                , div [ CSS.rightPanel ]
-    --                    [ MessageItem.view model.messageList
-    --                        |> App.map UpdateMsgList
-    --                    , ActionBar.view model.action
-    --                        |> App.map UpdateAction
-    --                    ]
-    --                ]
-    App.map UpdateLogin <|
-        Login.view model.login
+    case model.login.status == "succeed" && model.route == Router.RouteMain of
+        True ->
+            div []
+                [ App.map UpdateChatList <|
+                    ChatItem.view model.chatList
+                , div [ CSS.rightPanel ]
+                    [ App.map UpdateMsgList <|
+                        MessageItem.view model.messageList
+                    , App.map UpdateAction <|
+                        ActionBar.view model.action
+                    ]
+                ]
+
+        False ->
+            App.map UpdateLogin <|
+                Login.view model.login
 
 
 subscriptions : Model -> Sub Msg
