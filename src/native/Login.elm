@@ -57,14 +57,12 @@ update msg model =
             ( model, auth model.username model.password )
 
         Succeed resp ->
-            -- TODO: status maybe removeable
-            -- as Type checking can ensure authentication
             ( { model
                 | status = "succeed"
                 , user = resp
               }
             , Cmd.batch
-                [ store (encodeAuth model)
+                [ store (encodeAuth resp)
                 , newUrl "#main"
                 ]
             )
@@ -122,14 +120,14 @@ auth username password =
     perform Fail Succeed (verify username password)
 
 
-encodeAuth : Model -> String
-encodeAuth model =
+encodeAuth : AuthResp -> String
+encodeAuth auth =
     let
         payload =
             En.object
-                [ ( "id", En.string model.user.id )
-                , ( "uuid", En.string model.user.uuid )
-                , ( "session", En.string model.user.session )
+                [ ( "id", En.string auth.id )
+                , ( "uuid", En.string auth.uuid )
+                , ( "session", En.string auth.session )
                 ]
     in
         En.encode 0 payload

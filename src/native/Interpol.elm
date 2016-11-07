@@ -10,6 +10,7 @@ import Json.Decode as De
         , list
         , string
         )
+import Navigation exposing (newUrl)
 
 
 type alias Model =

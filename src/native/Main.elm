@@ -86,14 +86,19 @@ update msg model =
             let
                 ( login', effectLogin ) =
                     Login.update msgLogin model.login
+
+                chatListCmd =
+                    if login'.status == "succeed" then
+                        ChatItem.getChatList login'.user.id
+                    else
+                        Cmd.none
             in
-                (Debug.log << toString <| "in login")
-                    ( { model | login = login' }
-                    , Cmd.batch
-                        [ Cmd.map UpdateLogin effectLogin
-                        , Cmd.map UpdateChatList (ChatItem.getChatList login'.user.id)
-                        ]
-                    )
+                ( { model | login = login' }
+                , Cmd.batch
+                    [ Cmd.map UpdateLogin effectLogin
+                    , Cmd.map UpdateChatList chatListCmd
+                    ]
+                )
 
         UpdateChatList msgChatList ->
             let
@@ -110,10 +115,9 @@ update msg model =
                 --                        _ ->
                 --                            [ Cmd.none ]
             in
-                (Debug.log << toString <| "in chat list")
-                    ( { model | chatList = chatList' }
-                    , Cmd.map UpdateChatList effectChatList
-                    )
+                ( { model | chatList = chatList' }
+                , Cmd.map UpdateChatList effectChatList
+                )
 
         --        UpdateMsgList msgMsgList ->
         --            let
@@ -157,7 +161,7 @@ update msg model =
                 ( newPort, effectPort ) =
                     Interpol.update msgPort model.interpol
 
-                ( newLogin, effectLogin ) =
+                ( newLogin, routeMain ) =
                     let
                         ( status, login' ) =
                             Interpol.interpolLogin newPort.interpol
@@ -170,13 +174,13 @@ update msg model =
                     in
                         ( Login.makeLogin status login', Navigation.newUrl validRoute )
             in
-                (Debug.log << toString <| "in interpol")
-                    ( { model | login = newLogin, interpol = newPort }
-                    , Cmd.batch
-                        [ Cmd.map UpdatePort effectPort
-                        , effectLogin
-                        ]
-                    )
+                ( { model | login = newLogin, interpol = newPort }
+                , Cmd.batch
+                    [ Cmd.map UpdatePort effectPort
+                    -- Trigger login event
+                    , routeMain
+                    ]
+                )
 
 
 
@@ -193,9 +197,7 @@ urlUpdate result model =
         unwrapRoute =
             Router.routeFromResult result
     in
-        case unwrapRoute of
-            unwrapRoute ->
-                ( { model | route = unwrapRoute }, Cmd.none )
+        ( { model | route = unwrapRoute }, Cmd.none )
 
 
 view : Model -> Html Msg
