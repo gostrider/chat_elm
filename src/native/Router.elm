@@ -10,10 +10,11 @@ type Route
     | RouteNothing
 
 
-matchers : Parser (Route -> a) a
-matchers =
+matchRoute : Parser (Route -> a) a
+matchRoute =
     oneOf
         [ format RouteMain (s "main")
+        , format RouteNothing (s "login")
         , format RouteNothing (s "")
         ]
 
@@ -22,7 +23,7 @@ hashParser : Location -> Result String Route
 hashParser location =
     location.hash
         |> dropLeft 1
-        |> parse identity matchers
+        |> parse identity matchRoute
 
 
 parser : Navigation.Parser (Result String Route)
@@ -37,5 +38,4 @@ routeFromResult result =
             route
 
         Err err ->
-            (Debug.log << toString <| err)
-                RouteNothing
+            RouteNothing

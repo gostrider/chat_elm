@@ -10,6 +10,12 @@ import Json.Encode as En
 import Task exposing (Task, perform)
 
 
+-- Function only
+
+import Interpol exposing (store)
+import Navigation exposing (newUrl)
+
+
 type alias Model =
     { username : String
     , password : String
@@ -57,7 +63,10 @@ update msg model =
                 | status = "succeed"
                 , user = resp
               }
-            , Cmd.none
+            , Cmd.batch
+                [ store (encodeAuth model)
+                , newUrl "#main"
+                ]
             )
 
         Fail err ->
@@ -124,3 +133,8 @@ encodeAuth model =
                 ]
     in
         En.encode 0 payload
+
+
+makeLogin : String -> AuthResp -> Model
+makeLogin status login =
+    Model "" "" status login

@@ -25,14 +25,11 @@ app.ports.store.subscribe(function(valueToStore) {
     } else {
         result = "error";
     }
-//    app.ports.reply.send(JSON.stringify({
-//        "event" : "post",
-//        "response" : result
-//    }));
 });
 
 app.ports.get.subscribe(function(key) {
     var value = localStorage.getItem(key);
+    console.log(value);
     if (value === null) value = "error";
     try {
         value = JSON.parse(value);
@@ -47,4 +44,12 @@ app.ports.get.subscribe(function(key) {
         }));
     }
 
+});
+
+app.ports.remove.subscribe(function(key) {
+    if (storageAvailable('localStorage')) {
+        localStorage.removeItem(key);
+    } else {
+        console.log("localStorage not available");
+    }
 });

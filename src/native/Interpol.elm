@@ -46,6 +46,9 @@ port reply : (String -> msg) -> Sub msg
 port get : String -> Cmd msg
 
 
+port remove : String -> Cmd msg
+
+
 init : Model
 init =
     Model << ResponseString <| ""
@@ -61,7 +64,9 @@ update msg model =
                         |> De.decodeString responseDecoder
                         |> Result.withDefault (ResponseString "err")
             in
-                ( { model | interpol = interpolDecode }, Cmd.none )
+                ( { model | interpol = interpolDecode }
+                , Cmd.none
+                )
 
 
 stringDecoder : Decoder Delivery
@@ -101,7 +106,7 @@ responseDecoder =
     at [ "event" ] string `andThen` packageDecoder
 
 
-interpolLogin : Delivery -> (String, RespAuth)
+interpolLogin : Delivery -> ( String, RespAuth )
 interpolLogin delivery =
     case delivery of
         ResponseAuthenticate val ->

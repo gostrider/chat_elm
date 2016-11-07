@@ -27,10 +27,6 @@ type Msg
     | RethinkChanges String
 
 
-
-{- Application Callbacks -}
-
-
 init : Model
 init =
     Model []
