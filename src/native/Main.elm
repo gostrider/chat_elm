@@ -161,24 +161,20 @@ update msg model =
                 ( newPort, effectPort ) =
                     Interpol.update msgPort model.interpol
 
-                ( newLogin, routeMain ) =
-                    let
-                        ( status, login' ) =
-                            Interpol.interpolLogin newPort.interpol
+                ( status, login' ) =
+                    Interpol.interpolLogin newPort.interpol
 
-                        validRoute =
-                            if status == "succeed" then
-                                "#main"
-                            else
-                                "#login"
-                    in
-                        ( Login.makeLogin status login', Navigation.newUrl validRoute )
+                ( newRoute, chatListCmd ) =
+                    if status == "succeed" then
+                        ( "#main", ChatItem.getChatList login'.id )
+                    else
+                        ( "#login", Cmd.none )
             in
-                ( { model | login = newLogin, interpol = newPort }
+                ( { model | login = Login.makeLogin status login', interpol = newPort }
                 , Cmd.batch
                     [ Cmd.map UpdatePort effectPort
-                    -- Trigger login event
-                    , routeMain
+                    , Cmd.map UpdateChatList chatListCmd
+                    , Navigation.newUrl newRoute
                     ]
                 )
 
