@@ -51,13 +51,21 @@ update ctx msg model =
             ( { model | visible = value }, Cmd.none )
 
         Send ->
-            ( { model | message = "" }, send_message ctx model.message )
+            ( model, send_message ctx model.message )
 
         SendSucceed resp ->
             ( { model | action = toString resp }, Cmd.none )
 
         Fail err ->
             ( { model | action = toString err }, Cmd.none )
+
+
+
+--        Logout ->
+--            { model | login = Login.init }
+--                ! [ Interpol.remove "user_auth"
+--                  , Navigation.newUrl "#login"
+--                  ]
 
 
 view : Model -> Html Msg
@@ -80,13 +88,13 @@ send s f t m =
                 , ( "cookie", En.string s )
                 ]
     in
-        Http.send Http.defaultSettings
+        Http.send
             { verb = "POST"
             , headers = [ ( "Content-Type", "application/json" ) ]
             , url = "http://localhost:3000/reply"
-            , body = Http.string <| En.encode 0 payload
+            , body = Http.getString <| En.encode 0 payload
             }
-            |> Http.fromJson (at [ "status" ] int)
+            |> Http.expectJson (at [ "status" ] int)
 
 
 send_message : Context -> String -> Cmd Msg

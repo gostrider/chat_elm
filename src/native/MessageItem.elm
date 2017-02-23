@@ -35,21 +35,21 @@ init =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Succeed message' ->
-            ( { model | messages = message' }, Cmd.none )
+        Succeed message_ ->
+            ( { model | messages = message_ }, Cmd.none )
 
         Fail _ ->
             ( model, Cmd.none )
 
         RethinkChanges content ->
             let
-                content' =
+                content_ =
                     Result.withDefault
                         (MessageItem "" "decode failed" "" "" "")
                         (De.decodeString decodeChanges content)
             in
-                (Debug.log <| toString content')
-                    ( { model | messages = model.messages ++ [ content' ] }, Cmd.none )
+                --                ( { model | messages = model.messages ++ [ content_ ] }, Cmd.none )
+                ( model, Cmd.none )
 
 
 view : Model -> Html Msg
@@ -64,7 +64,7 @@ view model =
 decodeChanges : Decoder MessageItem
 decodeChanges =
     at [ "event" ] string
-        `andThen` decodePackage
+        |> andThen decodePackage
 
 
 decodePackage : String -> Decoder MessageItem
@@ -79,7 +79,7 @@ decodePackage event =
 
 decodeMsg : Decoder MessageItem
 decodeMsg =
-    De.object5 MessageItem
+    De.map5 MessageItem
         (at [ "package", "new_val", "avatar" ] string)
         (at [ "package", "new_val", "body" ] string)
         (at [ "package", "new_val", "recipient" ] string)
@@ -90,7 +90,7 @@ decodeMsg =
 decodeMsgList : Decoder (List MessageItem)
 decodeMsgList =
     De.list <|
-        De.object5 MessageItem
+        De.map5 MessageItem
             (at [ "avatar" ] string)
             (at [ "body" ] string)
             (at [ "recipient" ] string)
@@ -109,8 +109,7 @@ messageList send_from send_to =
 
 getMessageList : String -> String -> Cmd Msg
 getMessageList send_from send_to =
-    -- TODO Verify client server position
-    perform Fail Succeed <| messageList send_from send_to
+    perform Fail Succeed (messageList send_from send_to)
 
 
 msgItem : MessageItem -> Html Msg

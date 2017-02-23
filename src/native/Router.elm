@@ -1,8 +1,8 @@
 module Router exposing (..)
 
-import Navigation exposing (Location, makeParser)
+import Navigation exposing (Location)
 import String exposing (dropLeft)
-import UrlParser exposing (Parser, format, oneOf, parse, s)
+import UrlParser exposing (Parser, map, oneOf, parseHash, s)
 
 
 type Route
@@ -13,9 +13,9 @@ type Route
 matchRoute : Parser (Route -> a) a
 matchRoute =
     oneOf
-        [ format RouteMain (s "main")
-        , format RouteNothing (s "login")
-        , format RouteNothing (s "")
+        [ map RouteMain (s "main")
+        , map RouteNothing (s "login")
+        , map RouteNothing (s "")
         ]
 
 
@@ -23,12 +23,7 @@ hashParser : Location -> Result String Route
 hashParser location =
     location.hash
         |> dropLeft 1
-        |> parse identity matchRoute
-
-
-parser : Navigation.Parser (Result String Route)
-parser =
-    makeParser hashParser
+        |> parseHash identity matchRoute
 
 
 routeFromResult : Result String Route -> Route

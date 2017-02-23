@@ -72,14 +72,14 @@ update msg model =
 
 stringDecoder : Decoder Delivery
 stringDecoder =
-    De.object1 ResponseString
+    De.map ResponseString
         (at [ "response" ] string)
 
 
 authDecoder : Decoder Delivery
 authDecoder =
-    De.object1 ResponseAuthenticate
-        (De.object3 RespAuth
+    De.map ResponseAuthenticate
+        (De.map3 RespAuth
             (at [ "response", "id" ] string)
             (at [ "response", "uuid" ] string)
             (at [ "response", "session" ] string)
@@ -104,7 +104,7 @@ packageDecoder event =
 
 responseDecoder : Decoder Delivery
 responseDecoder =
-    at [ "event" ] string `andThen` packageDecoder
+    at [ "event" ] string |> andThen packageDecoder
 
 
 interpolLogin : Delivery -> ( String, RespAuth )

@@ -55,7 +55,7 @@ view model =
 decodeChatList : Decoder (List ChatItem)
 decodeChatList =
     De.list <|
-        De.object5 ChatItem
+        De.map5 ChatItem
             (at [ "reduction", "avatar" ] string)
             (at [ "reduction", "body" ] string)
             (at [ "group" ] string)

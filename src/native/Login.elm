@@ -1,11 +1,10 @@
 module Login exposing (..)
 
 import Html exposing (..)
-import Html.App as App
-import Html.Attributes exposing (align, type', style)
+import Html.Attributes exposing (align, type_, style)
 import Html.Events exposing (onClick, onInput)
 import Http as Http exposing (Error)
-import Json.Decode as De exposing (Decoder, at, int, string, object3)
+import Json.Decode as De exposing (Decoder, at, int, string, map3)
 import Json.Encode as En
 import Task exposing (Task, perform)
 
@@ -47,11 +46,11 @@ init =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Username username' ->
-            ( { model | username = username' }, Cmd.none )
+        Username username_ ->
+            ( { model | username = username_ }, Cmd.none )
 
-        Password password' ->
-            ( { model | password = password' }, Cmd.none )
+        Password password_ ->
+            ( { model | password = password_ }, Cmd.none )
 
         Auth ->
             ( model, auth model.username model.password )
@@ -77,10 +76,10 @@ view model =
         [ h1 [] [ text "Title" ]
         , br [] []
         , text "Username: "
-        , input [ onInput Username, type' "text" ] []
+        , input [ onInput Username, type_ "text" ] []
         , br [] []
         , text "Password: "
-        , input [ onInput Password, type' "password" ] []
+        , input [ onInput Password, type_ "password" ] []
         , br [] []
         , div []
             [ text model.status
@@ -91,7 +90,7 @@ view model =
 
 decoder : Decoder AuthResp
 decoder =
-    object3 AuthResp
+    map3 AuthResp
         (at [ "chat_id" ] string)
         (at [ "uuid" ] string)
         (at [ "user_session" ] string)
@@ -109,10 +108,10 @@ verify username password =
         { verb = "POST"
         , headers = [ ( "Content-Type", "application/json" ) ]
         , url = "http://localhost:3000/login"
-        , body = Http.string <| En.encode 0 payload
+        , body = Http.getString <| En.encode 0 payload
         }
-            |> Http.send Http.defaultSettings
-            |> Http.fromJson decoder
+            |> Http.send
+            |> Http.expectJson decoder
 
 
 auth : String -> String -> Cmd Msg

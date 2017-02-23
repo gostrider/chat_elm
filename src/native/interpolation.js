@@ -29,7 +29,6 @@ app.ports.store.subscribe(function(valueToStore) {
 
 app.ports.get.subscribe(function(key) {
     var value = localStorage.getItem(key);
-    console.log(value);
     if (value === null) value = "error";
     try {
         value = JSON.parse(value);

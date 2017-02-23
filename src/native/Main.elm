@@ -7,7 +7,6 @@ import Interpol
 import Login
 import MessageItem
 import Navigation
-import Html.App as App
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
 import Router
@@ -23,7 +22,7 @@ import WebSocket
 
 main : Program Never
 main =
-    Navigation.program Router.parser
+    Navigation.program
         { init = init
         , view = view
         , update = update
@@ -34,10 +33,9 @@ main =
 
 type alias Model =
     { login : Login.Model
-    , chatList :
-        ChatItem.Model
-        --    , messageList : MessageItem.Model
-        --    , action : ActionBar.Model
+    , chatList : ChatItem.Model
+    , messageList : MessageItem.Model
+    , action : ActionBar.Model
     , interpol : Interpol.Model
     , route : Router.Route
     }
@@ -46,13 +44,9 @@ type alias Model =
 type Msg
     = UpdateLogin Login.Msg
     | UpdateChatList ChatItem.Msg
-      --    | UpdateMsgList MessageItem.Msg
-      --    | UpdateAction ActionBar.Msg
+    | UpdateMsgList MessageItem.Msg
+    | UpdateAction ActionBar.Msg
     | UpdatePort Interpol.Msg
-
-
-
---    | Logout
 
 
 init : Result String Router.Route -> ( Model, Cmd Msg )
@@ -64,17 +58,19 @@ init result =
         chat =
             ChatItem.init
 
-        --        message =
-        --            MessageItem.init
-        --        action =
-        --            ActionBar.init
+        message =
+            MessageItem.init
+
+        action =
+            ActionBar.init
+
         interpol =
             Interpol.init
 
         route =
             Router.routeFromResult result
     in
-        ( Model login chat interpol route
+        ( Model login chat message action interpol route
         , Interpol.get "user_auth"
         )
 
@@ -84,16 +80,16 @@ update msg model =
     case msg of
         UpdateLogin msgLogin ->
             let
-                ( login', effectLogin ) =
+                ( login_, effectLogin ) =
                     Login.update msgLogin model.login
 
                 chatListCmd =
-                    if login'.status == "succeed" then
-                        ChatItem.getChatList login'.user.id
+                    if login_.status == "succeed" then
+                        ChatItem.getChatList login_.user.id
                     else
                         Cmd.none
             in
-                ( { model | login = login' }
+                ( { model | login = login_ }
                 , Cmd.batch
                     [ Cmd.map UpdateLogin effectLogin
                     , Cmd.map UpdateChatList chatListCmd
@@ -102,89 +98,104 @@ update msg model =
 
         UpdateChatList msgChatList ->
             let
-                ( chatList', effectChatList ) =
+                ( chatList_, effectChatList ) =
                     ChatItem.update msgChatList model.chatList
 
-                --                chatListCmd =
-                --                    case msgChatList of
-                --                        ChatItem.GetUserChat user_id ->
-                --                            [ Cmd.map UpdateMsgList <|
-                --                                MessageItem.getMessageList user_id model.login.user.id
-                --                            ]
-                --
-                --                        _ ->
-                --                            [ Cmd.none ]
+                chatListCmd =
+                    case msgChatList of
+                        ChatItem.GetUserChat user_id ->
+                            Cmd.map UpdateMsgList
+                                (MessageItem.getMessageList user_id model.login.user.id)
+
+                        _ ->
+                            Cmd.none
             in
-                ( { model | chatList = chatList' }
-                , Cmd.map UpdateChatList effectChatList
+                ( { model | chatList = chatList_ }
+                , Cmd.batch
+                    [ Cmd.map UpdateChatList effectChatList
+                    , chatListCmd
+                    ]
                 )
 
-        --        UpdateMsgList msgMsgList ->
-        --            let
-        --                ( newMsgList, effectMsgList ) =
-        --                    MessageItem.update msgMsgList model.messageList
-        --
-        --                msgListCmd =
-        --                    case msgMsgList of
-        --                        MessageItem.RethinkChanges changes ->
-        --                            [ Cmd.map UpdateChatList <|
-        --                                ChatItem.getChatList model.login.user.id
-        --                            ]
-        --
-        --                        _ ->
-        --                            [ Cmd.none ]
-        --
-        --                ( newAction, effectAction ) =
-        --                    case msgMsgList of
-        --                        MessageItem.Succeed messages' ->
-        --                            ActionBar.update (context model) (ActionBar.Visible "visible") model.action
-        --
-        --                        _ ->
-        --                            ( model.action, Cmd.none )
-        --            in
-        --                { model | messageList = newMsgList }
-        --                    ! ([ Cmd.map UpdateMsgList effectMsgList
-        --                       ]
-        --                      )
-        --        UpdateAction msgAction ->
-        --            model ! []
-        --            let
-        --                ( newAction, effectAction ) =
-        --                    ActionBar.update (context model) msgAction model.action
-        --            in
-        --                { model | login = Login.init, action = newAction }
-        --                    ! [ Cmd.map UpdateAction effectAction
-        --                      , Navigation.newUrl "#main"
-        --                      ]
+        UpdateMsgList msgMsgList ->
+            let
+                ( newMsgList, effectMsgList ) =
+                    MessageItem.update
+                        msgMsgList
+                        model.messageList
+
+                msgListCmd =
+                    case msgMsgList of
+                        MessageItem.RethinkChanges changes ->
+                            Cmd.map UpdateChatList
+                                (ChatItem.getChatList model.login.user.id)
+
+                        _ ->
+                            Cmd.none
+
+                ( newAction, effectAction ) =
+                    case msgMsgList of
+                        MessageItem.Succeed messages_ ->
+                            ActionBar.update
+                                (context model)
+                                (ActionBar.Visible "visible")
+                                model.action
+
+                        _ ->
+                            ( model.action, Cmd.none )
+            in
+                (Debug.log << toString <| model.action)
+                    ( { model | action = newAction, messageList = newMsgList }
+                    , Cmd.batch
+                        [ Cmd.map UpdateMsgList effectMsgList
+                        , Cmd.map UpdateAction effectAction
+                        , msgListCmd
+                        ]
+                    )
+
+        UpdateAction msgAction ->
+            let
+                ( newAction, effectAction ) =
+                    ActionBar.update (context model) msgAction model.action
+
+                sendCmd =
+                    case msgAction of
+                        ActionBar.Send ->
+                            Cmd.map UpdateChatList
+                                (ChatItem.getChatList model.login.user.id)
+
+                        _ ->
+                            Cmd.none
+            in
+                ( { model | action = newAction }
+                , Cmd.batch
+                    [ Cmd.map UpdateAction effectAction
+                    , sendCmd
+                    ]
+                )
+
         UpdatePort msgPort ->
+            -- Handle session expired
             let
                 ( newPort, effectPort ) =
                     Interpol.update msgPort model.interpol
 
-                ( status, login' ) =
+                ( status, login_ ) =
                     Interpol.interpolLogin newPort.interpol
 
                 ( newRoute, chatListCmd ) =
                     if status == "succeed" then
-                        ( "#main", ChatItem.getChatList login'.id )
+                        ( "#main", ChatItem.getChatList login_.id )
                     else
                         ( "#login", Cmd.none )
             in
-                ( { model | login = Login.makeLogin status login', interpol = newPort }
+                ( { model | login = Login.makeLogin status login_, interpol = newPort }
                 , Cmd.batch
                     [ Cmd.map UpdatePort effectPort
                     , Cmd.map UpdateChatList chatListCmd
                     , Navigation.newUrl newRoute
                     ]
                 )
-
-
-
---        Logout ->
---            { model | login = Login.init }
---                ! [ Interpol.remove "user_auth"
---                  , Navigation.newUrl "#login"
---                  ]
 
 
 urlUpdate : Result String Router.Route -> Model -> ( Model, Cmd Msg )
@@ -201,17 +212,15 @@ view model =
     case model.login.status == "succeed" && model.route == Router.RouteMain of
         True ->
             div []
-                [ App.map UpdateChatList (ChatItem.view model.chatList)
-                  --                , div [ CSS.rightPanel ]
-                  --                    [ App.map UpdateMsgList <|
-                  --                        MessageItem.view model.messageList
-                  --                    , App.map UpdateAction <|
-                  --                        ActionBar.view model.action
-                  --                    ]
+                [ Html.map UpdateChatList (ChatItem.view model.chatList)
+                , div [ CSS.rightPanel ]
+                    [ Html.map UpdateMsgList (MessageItem.view model.messageList)
+                    , Html.map UpdateAction (ActionBar.view model.action)
+                    ]
                 ]
 
         False ->
-            App.map UpdateLogin (Login.view model.login)
+            Html.map UpdateLogin (Login.view model.login)
 
 
 subscriptions : Model -> Sub Msg
@@ -220,17 +229,15 @@ subscriptions model =
         subMsgList =
             WebSocket.listen "ws://localhost:4080" MessageItem.RethinkChanges
     in
-        Sub.map UpdatePort (Interpol.reply Interpol.Return)
+        Sub.batch
+            [ Sub.map UpdateMsgList subMsgList
+            , Sub.map UpdatePort (Interpol.reply Interpol.Return)
+            ]
 
 
-
---        Sub.batch
---            [ Sub.map UpdateMsgList subMsgList
---            , Sub.map UpdatePort (Interpol.reply Interpol.Return)
---            ]
---context : Model -> { send_from : String, send_to : String, session : String }
---context model =
---    { send_from = model.login.user.id
---    , send_to = model.chatList.current
---    , session = model.login.user.session
---    }
+context : Model -> { send_from : String, send_to : String, session : String }
+context model =
+    { send_from = model.login.user.id
+    , send_to = model.chatList.current
+    , session = model.login.user.session
+    }
