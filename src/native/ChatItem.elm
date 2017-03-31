@@ -70,7 +70,7 @@ chatList id =
 
 getChatList : String -> Cmd Msg
 getChatList id =
-    perform Fail Succeed <| chatList id
+    perform Succeed (chatList id)
 
 
 chatItem : ChatItem -> Html Msg

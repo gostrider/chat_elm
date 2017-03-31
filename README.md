@@ -10,7 +10,7 @@
 ### Requirement ###
 * NodeJS
 * npm
-* elm 0.17.1 (Major Update)
+* elm 0.18
 * elm-format (Optional)
 
 
@@ -28,7 +28,7 @@ npm install -g elm
 brew install node
 
 # Elm: Install from installer  
-http://install.elm-lang.org/Elm-Platform-0.17.1.pkg
+http://install.elm-lang.org/Elm-Platform-0.18.pkg
 ```
 
 ### elm-format ###
@@ -39,7 +39,12 @@ Move `elm-format` to `/usr/local/bin/elm-format`
 Setup elm-format for IntelliJ IDE  
 GoTo **Preferences > External Tools > +**  
 
-![elm-format.png](https://bitbucket.org/repo/LGgLdL/images/2512652711-elm-format.png)
+~~~text
+Tool settings:
+	Program: <path_to_elm-format> or /usr/local/bin/elm-format
+	Parameters: --yes $FilePath$
+	Working Directory: $ProjectFileDir$
+~~~
 
 ### Others ###
 Try elm online  

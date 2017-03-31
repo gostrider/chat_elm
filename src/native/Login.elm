@@ -3,47 +3,29 @@ module Login exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (align, type_, style)
 import Html.Events exposing (onClick, onInput)
-import Http as Http exposing (Error)
-import Json.Decode as De exposing (Decoder, at, int, string, map3)
-import Json.Encode as En
-import Task exposing (Task, perform)
+import Services.LoginService as LoginService
 
 
--- Function only
-
-import Interpol exposing (store)
-import Navigation exposing (newUrl)
-
-
-type alias Model =
+type alias Login =
     { username : String
     , password : String
-    , status : String
-    , user : AuthResp
+    , user : LoginService.Authentication
     }
 
 
-type alias AuthResp =
-    { id : String
-    , uuid : String
-    , session : String
-    }
-
-
-type Msg
+type LoginStatus
     = Auth
     | Username String
     | Password String
-    | Succeed AuthResp
-    | Fail Error
+    | UpdateLoginService LoginService.AuthStatus
 
 
-init : Model
+init : Login
 init =
-    Model "" "" "" (AuthResp "" "" "")
+    Login "" "" LoginService.init
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : LoginStatus -> Login -> ( Login, Cmd LoginStatus )
 update msg model =
     case msg of
         Username username_ ->
@@ -53,24 +35,21 @@ update msg model =
             ( { model | password = password_ }, Cmd.none )
 
         Auth ->
-            ( model, auth model.username model.password )
+            let
+                effLoginService =
+                    LoginService.verify (LoginService.formPayload model.username model.password)
+            in
+                ( model, Cmd.map UpdateLoginService effLoginService )
 
-        Succeed resp ->
-            ( { model
-                | status = "succeed"
-                , user = resp
-              }
-            , Cmd.batch
-                [ store (encodeAuth resp)
-                , newUrl "#main"
-                ]
-            )
-
-        Fail err ->
-            ( { model | status = "failed" }, Cmd.none )
+        UpdateLoginService loginService_ ->
+            let
+                ( loginServiceUpdate, effLoginService ) =
+                    LoginService.update loginService_ model.user
+            in
+                ( { model | user = loginServiceUpdate }, Cmd.map UpdateLoginService effLoginService )
 
 
-view : Model -> Html Msg
+view : Login -> Html LoginStatus
 view model =
     div [ align "center" ]
         [ h1 [] [ text "Title" ]
@@ -82,56 +61,13 @@ view model =
         , input [ onInput Password, type_ "password" ] []
         , br [] []
         , div []
-            [ text model.status
+            [ text model.user.status
             , button [ onClick Auth ] [ text "Login" ]
             ]
         ]
 
 
-decoder : Decoder AuthResp
-decoder =
-    map3 AuthResp
-        (at [ "chat_id" ] string)
-        (at [ "uuid" ] string)
-        (at [ "user_session" ] string)
 
-
-verify : String -> String -> Task Error AuthResp
-verify username password =
-    let
-        payload =
-            En.object
-                [ ( "username", En.string username )
-                , ( "password", En.string password )
-                ]
-    in
-        { verb = "POST"
-        , headers = [ ( "Content-Type", "application/json" ) ]
-        , url = "http://localhost:3000/login"
-        , body = Http.getString <| En.encode 0 payload
-        }
-            |> Http.send
-            |> Http.expectJson decoder
-
-
-auth : String -> String -> Cmd Msg
-auth username password =
-    perform Fail Succeed (verify username password)
-
-
-encodeAuth : AuthResp -> String
-encodeAuth auth =
-    let
-        payload =
-            En.object
-                [ ( "id", En.string auth.id )
-                , ( "uuid", En.string auth.uuid )
-                , ( "session", En.string auth.session )
-                ]
-    in
-        En.encode 0 payload
-
-
-makeLogin : String -> AuthResp -> Model
-makeLogin status login =
-    Model "" "" status login
+--makeLogin : String -> LoginService.Authentication -> Login
+--makeLogin status login =
+--    Login "" "" status login
