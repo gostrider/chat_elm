@@ -1,49 +1,55 @@
 module Main exposing (..)
 
-import Html exposing (Html, div, program)
-import Login exposing (Login, LoginStatus)
+import Html exposing (program)
+import Models.Application exposing (Application, ApplicationAction(..))
+import Models.ChatList exposing (ChatListAction)
+import Models.Message exposing (MessageUpdate)
+import Views.MainView exposing (applicationView)
+import Controllers.Login as Login
+import Controllers.ChatItem as ChatItem
+import Controllers.MessageItem as Messages
 
 
-main : Program Never Model Msg
+main : Program Never Application ApplicationAction
 main =
     program
         { init = init
-        , view = view
+        , view = applicationView
         , update = update
         , subscriptions = subscriptions
         }
 
 
-type alias Model =
-    { login : Login
-    }
-
-
-type Msg
-    = UpdateLogin LoginStatus
-
-
-init : ( Model, Cmd Msg )
+init : ( Application, Cmd ApplicationAction )
 init =
-    ( Model Login.init, Cmd.none )
+    Application Login.init ChatItem.init Messages.init ! []
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        UpdateLogin updateLogin ->
+update : ApplicationAction -> Application -> ( Application, Cmd ApplicationAction )
+update action app =
+    case action of
+        LoginAction_ loginAction ->
             let
                 ( login_, effLogin ) =
-                    Login.update updateLogin model.login
+                    Login.update loginAction app.login
             in
-                ( { model | login = login_ }, Cmd.map UpdateLogin effLogin )
+                ( { app | login = login_ }, Cmd.map LoginAction_ effLogin )
+
+        ChatListAction_ chatListAction ->
+            let
+                ( chatList_, effChatList ) =
+                    ChatItem.update chatListAction app.chatList
+            in
+                ( { app | chatList = chatList_ }, Cmd.map ChatListAction_ effChatList )
+
+        MessageUpdate_ messageUpdate ->
+            let
+                ( messages_, effMessages ) =
+                    Messages.update messageUpdate app.messages
+            in
+                ( { app | messages = messages_ }, Cmd.map MessageUpdate_ effMessages )
 
 
-view : Model -> Html Msg
-view model =
-    div [] []
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions : Application -> Sub ApplicationAction
+subscriptions app =
     Sub.none

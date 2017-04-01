@@ -1,8 +1,15 @@
-module Login exposing (..)
+module Controllers.Login exposing (..)
+
+-- Core
 
 import Html exposing (..)
 import Html.Attributes exposing (align, type_, style)
 import Html.Events exposing (onClick, onInput)
+
+
+-- Data model
+
+import Models.Login exposing (AuthStatus)
 import Services.LoginService as LoginService
 
 
@@ -13,11 +20,11 @@ type alias Login =
     }
 
 
-type LoginStatus
+type LoginAction
     = Auth
     | Username String
     | Password String
-    | UpdateLoginService LoginService.AuthStatus
+    | UpdateLoginService AuthStatus
 
 
 init : Login
@@ -25,32 +32,32 @@ init =
     Login "" "" LoginService.init
 
 
-update : LoginStatus -> Login -> ( Login, Cmd LoginStatus )
-update msg model =
-    case msg of
+update : LoginAction -> Login -> ( Login, Cmd LoginAction )
+update action login =
+    case action of
         Username username_ ->
-            ( { model | username = username_ }, Cmd.none )
+            ( { login | username = username_ }, Cmd.none )
 
         Password password_ ->
-            ( { model | password = password_ }, Cmd.none )
+            ( { login | password = password_ }, Cmd.none )
 
         Auth ->
             let
                 effLoginService =
-                    LoginService.verify (LoginService.formPayload model.username model.password)
+                    LoginService.verify (LoginService.formPayload login.username login.password)
             in
-                ( model, Cmd.map UpdateLoginService effLoginService )
+                ( login, Cmd.map UpdateLoginService effLoginService )
 
         UpdateLoginService loginService_ ->
             let
                 ( loginServiceUpdate, effLoginService ) =
-                    LoginService.update loginService_ model.user
+                    LoginService.update loginService_ login.user
             in
-                ( { model | user = loginServiceUpdate }, Cmd.map UpdateLoginService effLoginService )
+                ( { login | user = loginServiceUpdate }, Cmd.map UpdateLoginService effLoginService )
 
 
-view : Login -> Html LoginStatus
-view model =
+view : Login -> Html LoginAction
+view login =
     div [ align "center" ]
         [ h1 [] [ text "Title" ]
         , br [] []
@@ -61,7 +68,7 @@ view model =
         , input [ onInput Password, type_ "password" ] []
         , br [] []
         , div []
-            [ text (toString model.user.status)
+            [ text (toString login.user.status)
             , button [ onClick Auth ] [ text "Login" ]
             ]
         ]

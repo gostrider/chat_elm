@@ -1,12 +1,16 @@
 module Services.LoginService exposing (..)
 
+-- Core
+
 import Http as Http exposing (Error, header, jsonBody)
 import Json.Encode as En
 import Json.Decode as De exposing (Decoder, at, int, map3, string)
 
 
--- Function only
+-- Data model
 
+import Models.User exposing (User)
+import Models.Login exposing (AuthStatus(..), Status(..))
 import Interpol exposing (store)
 
 
@@ -16,37 +20,19 @@ type alias Authentication =
     }
 
 
-type alias User =
-    { id : String
-    , uuid : String
-    , session : String
-    }
-
-
-type Status
-    = None
-    | LoginSucceed
-    | LoginFailed
-
-
-type AuthStatus
-    = Succeed User
-    | Fail Error
-
-
 init : Authentication
 init =
-    Authentication None (User "" "" "")
+    Authentication LoginFailed (User "" "" "")
 
 
 update : AuthStatus -> Authentication -> ( Authentication, Cmd msg )
-update msg model =
-    case msg of
+update status authentication =
+    case status of
         Succeed auth ->
-            ( { model | status = LoginSucceed, authentication = auth }, Cmd.batch [ store (encoder auth) ] )
+            ( { authentication | status = LoginSucceed, authentication = auth }, Cmd.batch [ store (encoder auth) ] )
 
         Fail _ ->
-            ( { model | status = LoginFailed }, Cmd.none )
+            ( { authentication | status = LoginFailed }, Cmd.none )
 
 
 encoder : User -> String

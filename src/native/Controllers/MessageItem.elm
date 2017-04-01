@@ -1,40 +1,21 @@
-module MessageItem exposing (..)
+module Controllers.MessageItem exposing (..)
 
-import CSS exposing (floatLeft, floatRight, messagePanel)
+import Utils.CSS exposing (floatLeft, floatRight, messagePanel)
 import Html exposing (Html, br, div, text)
-import Http exposing (Error, get)
+import Http exposing (Error, Request, get)
 import Json.Decode as De exposing (Decoder, at, andThen, string)
 import Task exposing (Task, perform)
+import Models.Message exposing (Message, Messages, MessageUpdate(..))
 
 
-type alias MessageItem =
-    { avatar : String
-    , body : String
-    , recipient : String
-    , sender : String
-    , send_direction : String
-    }
-
-
-type alias Model =
-    { messages : List MessageItem
-    }
-
-
-type Msg
-    = Succeed (List MessageItem)
-    | Fail Error
-    | RethinkChanges String
-
-
-init : Model
+init : Messages
 init =
-    Model []
+    Messages []
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
+update : MessageUpdate -> Messages -> ( Messages, Cmd MessageUpdate )
+update action model =
+    case action of
         Succeed message_ ->
             ( { model | messages = message_ }, Cmd.none )
 
@@ -45,14 +26,14 @@ update msg model =
             let
                 content_ =
                     Result.withDefault
-                        (MessageItem "" "decode failed" "" "" "")
+                        (Message "" "decode failed" "" "" "")
                         (De.decodeString decodeChanges content)
             in
                 --                ( { model | messages = model.messages ++ [ content_ ] }, Cmd.none )
                 ( model, Cmd.none )
 
 
-view : Model -> Html Msg
+view : Messages -> Html MessageUpdate
 view model =
     div [ messagePanel ] <| List.map msgItem model.messages
 
@@ -61,13 +42,13 @@ view model =
 {- Module Functions -}
 
 
-decodeChanges : Decoder MessageItem
+decodeChanges : Decoder Message
 decodeChanges =
     at [ "event" ] string
         |> andThen decodePackage
 
 
-decodePackage : String -> Decoder MessageItem
+decodePackage : String -> Decoder Message
 decodePackage event =
     case event of
         "rethink-changes" ->
@@ -77,9 +58,9 @@ decodePackage event =
             De.fail "unknown event"
 
 
-decodeMsg : Decoder MessageItem
+decodeMsg : Decoder Message
 decodeMsg =
-    De.map5 MessageItem
+    De.map5 Message
         (at [ "package", "new_val", "avatar" ] string)
         (at [ "package", "new_val", "body" ] string)
         (at [ "package", "new_val", "recipient" ] string)
@@ -87,10 +68,10 @@ decodeMsg =
         (at [ "package", "new_val", "send_direction" ] string)
 
 
-decodeMsgList : Decoder (List MessageItem)
+decodeMsgList : Decoder (List Message)
 decodeMsgList =
     De.list <|
-        De.map5 MessageItem
+        De.map5 Message
             (at [ "avatar" ] string)
             (at [ "body" ] string)
             (at [ "recipient" ] string)
@@ -98,21 +79,18 @@ decodeMsgList =
             (at [ "send_direction" ] string)
 
 
-messageList : String -> String -> Task Error (List MessageItem)
+messageList : String -> String -> Request (List Message)
 messageList send_from send_to =
-    get decodeMsgList <|
-        "http://localhost:3000/userchat?from="
+    get
+        ("http://localhost:3000/userchat?from="
             ++ send_from
             ++ "&to="
             ++ send_to
+        )
+        decodeMsgList
 
 
-getMessageList : String -> String -> Cmd Msg
-getMessageList send_from send_to =
-    perform Fail Succeed (messageList send_from send_to)
-
-
-msgItem : MessageItem -> Html Msg
+msgItem : Message -> Html MessageUpdate
 msgItem { body, send_direction } =
     let
         content config =
