@@ -11,7 +11,7 @@ import Interpol exposing (store)
 
 
 type alias Authentication =
-    { status : String
+    { status : Status
     , authentication : User
     }
 
@@ -23,6 +23,12 @@ type alias User =
     }
 
 
+type Status
+    = None
+    | LoginSucceed
+    | LoginFailed
+
+
 type AuthStatus
     = Succeed User
     | Fail Error
@@ -30,17 +36,17 @@ type AuthStatus
 
 init : Authentication
 init =
-    Authentication "" (User "" "" "")
+    Authentication None (User "" "" "")
 
 
 update : AuthStatus -> Authentication -> ( Authentication, Cmd msg )
 update msg model =
     case msg of
         Succeed auth ->
-            ( { model | status = "succeed", authentication = auth }, Cmd.batch [ store (encoder auth) ] )
+            ( { model | status = LoginSucceed, authentication = auth }, Cmd.batch [ store (encoder auth) ] )
 
         Fail _ ->
-            ( { model | status = "failed" }, Cmd.none )
+            ( { model | status = LoginFailed }, Cmd.none )
 
 
 encoder : User -> String

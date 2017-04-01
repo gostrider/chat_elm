@@ -61,7 +61,7 @@ view model =
         , input [ onInput Password, type_ "password" ] []
         , br [] []
         , div []
-            [ text model.user.status
+            [ text (toString model.user.status)
             , button [ onClick Auth ] [ text "Login" ]
             ]
         ]
